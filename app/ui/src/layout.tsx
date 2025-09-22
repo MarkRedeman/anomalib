@@ -1,13 +1,20 @@
 import { Flex, Grid, Tabs, View } from '@geti/ui';
-import { Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation, useParams } from 'react-router';
+
+import { ProjectsListPanel } from './features/projects/menu/projects-list-panel.component';
 
 const Header = () => {
+    const params = useParams();
     return (
         <View backgroundColor={'gray-300'} gridArea={'header'}>
             <Flex height='100%' alignItems={'center'} marginX='1rem' gap='size-200'>
                 <View marginEnd='size-200' maxWidth={'5ch'}>
                     <span>Geti Inspect</span>
                 </View>
+
+                <Flex alignItems={'center'} height={'100%'} marginStart='auto'>
+                    {params.project_id && <ProjectsListPanel />}
+                </Flex>
             </Flex>
         </View>
     );
