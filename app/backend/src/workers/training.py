@@ -15,10 +15,18 @@ SCHEDULE_INTERVAL_SEC = 5
 
 async def _train_loop(stop_event: EventClass) -> None:
     """Main training loop that polls for jobs and manages concurrent training tasks."""
+
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - $(message)s")
+
+
     training_service = TrainingService()
     running_tasks: set[asyncio.Task] = set()
 
     while not stop_event.is_set():
+        await asyncio.sleep(0.5)
+        continue
+
+
         try:
             # Clean up completed tasks
             running_tasks = {task for task in running_tasks if not task.done()}

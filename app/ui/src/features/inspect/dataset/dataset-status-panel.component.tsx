@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { $api } from '@geti-inspect/api';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
 import { Button, Content, Flex, Heading, InlineAlert, Item, Picker, ProgressBar, Text } from '@geti/ui';
+import { SchemaJob, SchemaJobStatus } from 'src/api/openapi-spec';
 
 import { REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING } from './utils';
 
@@ -30,7 +31,35 @@ const useAvailableModels = () => {
             id: 'padim',
             name: 'PADIM',
         },
+        {
+            id: 'efficient_ad',
+            name: 'efficient_ad',
+        },
+        {
+            id: 'patchcore',
+            name: 'patchcore',
+        },
     ];
+    return [
+        'ai_vad',
+        'cfa',
+        'cflow',
+        'csflow',
+        'dfkde',
+        'dfm',
+        'draem',
+        'efficient_ad',
+        'fastflow',
+        'fre',
+        'ganomaly',
+        'padim',
+        'patchcore',
+        'reverse_distillation',
+        'stfpm',
+        'uflow',
+        'vlm_ad',
+        'winclip',
+    ].map((name) => ({ name, id: name }));
 
     return AVAILABLE_MODELS;
 };
@@ -84,33 +113,27 @@ interface TrainingInProgressProps {
     jobId: string;
 }
 
-const TrainingInProgress = ({ jobId }: TrainingInProgressProps) => {
-    const { data } = $api.useQuery('get', '/api/jobs', undefined, {
-        refetchInterval: ({ state }) => {
-            const job = state.data?.jobs.find(({ id }) => id === jobId);
+const JobProgress = ({ job: jobProgress }: { job: SchemaJob }) => {
+    const name = jobProgress.payload['model_name'] as string;
 
-            if (job === undefined) {
-                return undefined;
-            }
-
-            if (job.status === 'pending' || job.status === 'running') {
-                return 1000;
-            }
-
-            return undefined;
-        },
-    });
-
-    const jobProgress = data?.jobs.find((job) => job.id === jobId);
-
-    if (jobProgress === undefined || jobProgress.status === 'completed') {
-        return null;
+    if (jobProgress.status === 'completed') {
+        return (
+            <InlineAlert variant='info'>
+                <Heading>{name} - Finished</Heading>
+                <Content>
+                    <Flex direction={'column'} gap={'size-100'}>
+                        <Text>{jobProgress.message}</Text>
+                        <ProgressBar aria-label='Training progress' isIndeterminate />
+                    </Flex>
+                </Content>
+            </InlineAlert>
+        );
     }
 
     if (jobProgress.status === 'pending') {
         return (
             <InlineAlert variant='info'>
-                <Heading>Training will start soon</Heading>
+                <Heading>{name} - Training will start soon</Heading>
                 <Content>
                     <Flex direction={'column'} gap={'size-100'}>
                         <Text>{jobProgress.message}</Text>
@@ -124,7 +147,7 @@ const TrainingInProgress = ({ jobId }: TrainingInProgressProps) => {
     if (jobProgress.status === 'running') {
         return (
             <InlineAlert variant='info'>
-                <Heading>Training in progress</Heading>
+                <Heading>{name} - Training in progress</Heading>
                 <Content>
                     <Flex direction={'column'} gap={'size-100'}>
                         <Text>{jobProgress.message}</Text>
@@ -138,7 +161,7 @@ const TrainingInProgress = ({ jobId }: TrainingInProgressProps) => {
     if (jobProgress.status === 'failed') {
         return (
             <InlineAlert variant='negative'>
-                <Heading>Training failed</Heading>
+                <Heading>{name} - Training failed</Heading>
                 <Content>
                     <Text>{jobProgress.message}</Text>
                 </Content>
@@ -146,13 +169,35 @@ const TrainingInProgress = ({ jobId }: TrainingInProgressProps) => {
         );
     }
 
+    if (jobProgress.status === 'canceled') {
+        return (
+            <InlineAlert variant='negative'>
+                <Heading>{name} - Training canceled</Heading>
+                <Content>
+                    <Text>{jobProgress.message}</Text>
+                </Content>
+            </InlineAlert>
+        );
+    }
+};
+
+const TrainingInProgress = () => {
+    const { data } = $api.useQuery('get', '/api/jobs', undefined, {
+        refetchInterval: ({ state }) => {
+            const job = state.data?.jobs.some((job) => job.status === 'pending' || job.status === 'running');
+
+            if (job === undefined) {
+                return undefined;
+            } else {
+                return 1000;
+            }
+        },
+    });
+
     return (
-        <InlineAlert variant='negative'>
-            <Heading>Training canceled</Heading>
-            <Content>
-                <Text>{jobProgress.message}</Text>
-            </Content>
-        </InlineAlert>
+        <Flex direction='column' gap='size-200'>
+            {data?.jobs.map((job) => <JobProgress job={job} key={job.id} />)}
+        </Flex>
     );
 };
 
@@ -171,11 +216,21 @@ export const DatasetStatusPanel = ({ mediaItemsCount }: DatasetStatusPanelProps)
 
     // TODO: Investigate how to handle that case (local storage, poll for job status) after refreshing a page.
     if (startTrainingMutation.data !== undefined) {
-        return <TrainingInProgress jobId={startTrainingMutation.data.job_id} />;
+        return (
+            <>
+                <ReadyToTrain isPending={startTrainingMutation.isPending} onStartTraining={handleStartTraining} />
+                <TrainingInProgress />
+            </>
+        );
     }
 
     if (mediaItemsCount >= REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING) {
-        return <ReadyToTrain isPending={startTrainingMutation.isPending} onStartTraining={handleStartTraining} />;
+        return (
+            <>
+                <ReadyToTrain isPending={startTrainingMutation.isPending} onStartTraining={handleStartTraining} />
+                <TrainingInProgress />
+            </>
+        );
     }
 
     return <NotEnoughNormalImagesToTrain mediaItemsCount={mediaItemsCount} />;
