@@ -17,6 +17,76 @@ from utils import is_platform_darwin
 
 logger = logging.getLogger(__name__)
 
+from pytorch_lightning.loggers import Logger
+import trackio
+from trackio import TrackioImage, TrackioVideo
+from typing import Any, Dict, Optional, Union
+
+
+class HFTrackioLogger(Logger):
+    def __init__(
+        self,
+        project: str,
+        name: Optional[str] = None,
+        space_id: Optional[str] = None,
+        resume: str = "never",
+        private: Optional[bool] = None,
+        config: Optional[dict] = None,
+        embed: bool = True,
+    ):
+        super().__init__()
+        self._project = project
+        self._name = name
+        self._space_id = space_id
+        self._resume = resume
+        self._private = private
+        self._config = config or {}
+        self._embed = embed
+
+        # Initialize run
+        self.run = trackio.init(
+            project=self._project,
+            name=self._name,
+            space_id=self._space_id,
+            resume=self._resume,
+            private=self._private,
+            config=self._config,
+            embed=self._embed,
+        )
+
+    @property
+    def name(self) -> str:
+        return self._name or self._project
+
+    @property
+    def version(self) -> str:
+        # You might use some attribute of trackio.Run if exists
+        return f"run_{id(self.run)}"
+
+    def log_hyperparams(self, params: Union[Dict[str, Any], Any]) -> None:
+        # Pass hyperparams via config if possible, or log as metrics
+        params_dict = dict(params) if not isinstance(params, dict) else params
+        # One option: include in config during init; if already initialized,
+        # log them as metrics at step=0 or custom logic
+        trackio.log({f"hyperparams/{k}": v for k, v in params_dict.items()}, step=0)
+
+    def log_metrics(self, metrics: Dict[str, float], step: Optional[int] = None) -> None:
+        # This handles normal metrics
+        trackio.log(metrics, step=step)
+
+    def log_image(self, name: str, image, caption: Optional[str] = None, step: Optional[int] = None) -> None:
+        # If anomalib produces images
+        img = TrackioImage(image, caption=caption)
+        trackio.log({name: img}, step=step)
+
+    def log_video(self, name: str, video, caption: Optional[str] = None, fps: Optional[int] = None, format: Optional[str] = None, step: Optional[int] = None) -> None:
+        vid = TrackioVideo(video, caption=caption, fps=fps, format=format)
+        trackio.log({name: vid}, step=step)
+
+    def finalize(self, status: str) -> None:
+        # PyTorch Lightning calls logger.finalize("success" / "failed" etc.)
+        trackio.finish()
+
 
 class TrainingService:
     """
@@ -113,7 +183,8 @@ class TrainingService:
 
         # Initialize anomalib model and engine
         anomalib_model = get_model(model=model.name)
-        engine = Engine(default_root_dir=model.export_path)
+        trackio_logger = HFTrackioLogger(project=name)
+        engine = Engine(default_root_dir=model.export_path, logger=trackio_logger, max_epochs=50)
 
         # Execute training and export
         export_format = ExportType.OPENVINO
