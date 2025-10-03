@@ -31,11 +31,7 @@ const RedirectToProject = () => {
 export const router = createBrowserRouter([
     {
         path: paths.root.pattern,
-        element: <RedirectToProject />,
-    },
-    {
         errorElement: <ErrorPage />,
-        path: paths.project.pattern,
         element: (
             <Suspense fallback={<IntelBrandedLoading />}>
                 <Layout />
@@ -44,16 +40,20 @@ export const router = createBrowserRouter([
         children: [
             {
                 index: true,
+                element: <RedirectToProject />,
+            },
+            {
+                path: paths.project.pattern,
                 element: <Inspect />,
             },
+            {
+                path: paths.openapi.pattern,
+                element: <OpenApi />,
+            },
+            {
+                path: '*',
+                element: <RedirectToProject />,
+            },
         ],
-    },
-    {
-        path: paths.openapi.pattern,
-        element: <OpenApi />,
-    },
-    {
-        path: '*',
-        element: <RedirectToProject />,
     },
 ]);
