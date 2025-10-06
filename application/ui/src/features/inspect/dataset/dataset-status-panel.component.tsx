@@ -16,6 +16,7 @@ import {
     ProgressBar,
     Text,
 } from '@geti/ui';
+import { SchemaJob, SchemaJobStatus } from 'src/api/openapi-spec';
 
 import { REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING } from './utils';
 
@@ -118,7 +119,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
     if (job.status === 'pending') {
         return (
             <InlineAlert variant='info'>
-                <Heading>Training will start soon</Heading>
+                <Heading>{name} - Training will start soon</Heading>
                 <Content>
                     <Flex direction={'column'} gap={'size-100'}>
                         <Text>{job.message}</Text>
@@ -132,7 +133,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
     if (job.status === 'running') {
         return (
             <InlineAlert variant='info'>
-                <Heading>Training in progress</Heading>
+                <Heading>{name} - Training in progress</Heading>
                 <Content>
                     <Flex direction={'column'} gap={'size-100'}>
                         <Text>{job.message}</Text>
@@ -146,7 +147,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
     if (job.status === 'failed') {
         return (
             <InlineAlert variant='negative'>
-                <Heading>Training failed</Heading>
+                <Heading>{name} - Training failed</Heading>
                 <Content>
                     <Text>{job.message}</Text>
                 </Content>
