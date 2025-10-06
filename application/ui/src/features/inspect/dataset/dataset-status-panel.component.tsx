@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { $api } from '@geti-inspect/api';
 import { SchemaJob as Job } from '@geti-inspect/api/spec';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
-import { Button, Content, Divider, Flex, Heading, InlineAlert, Item, Picker, ProgressBar, Text } from '@geti/ui';
+import { Button, Content, Flex, Heading, InlineAlert, Item, Picker, ProgressBar, Text } from '@geti/ui';
+import { SchemaJob, SchemaJobStatus } from 'src/api/openapi-spec';
 
 import { REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING } from './utils';
 
@@ -26,7 +27,7 @@ const NotEnoughNormalImagesToTrain = ({ mediaItemsCount }: NotEnoughNormalImages
 };
 
 const useAvailableModels = () => {
-    const AVAILABLE_MODELS = [
+    return [
         'ai_vad',
         'cfa',
         'cflow',
@@ -46,8 +47,6 @@ const useAvailableModels = () => {
         'vlm_ad',
         'winclip',
     ].map((name) => ({ id: name, name }));
-
-    return AVAILABLE_MODELS;
 };
 
 const ReadyToTrain = () => {
@@ -122,7 +121,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
     if (job.status === 'pending') {
         return (
             <InlineAlert variant='info'>
-                <Heading>Training will start soon</Heading>
+                <Heading>{name} - Training will start soon</Heading>
                 <Content>
                     <Flex direction={'column'} gap={'size-100'}>
                         <Text>{job.message}</Text>
@@ -136,7 +135,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
     if (job.status === 'running') {
         return (
             <InlineAlert variant='info'>
-                <Heading>Training in progress</Heading>
+                <Heading>{name} - Training in progress</Heading>
                 <Content>
                     <Flex direction={'column'} gap={'size-100'}>
                         <Text>{job.message}</Text>
@@ -150,7 +149,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
     if (job.status === 'failed') {
         return (
             <InlineAlert variant='negative'>
-                <Heading>Training failed</Heading>
+                <Heading>{name} - Training failed</Heading>
                 <Content>
                     <Text>{job.message}</Text>
                 </Content>
