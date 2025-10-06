@@ -19,6 +19,9 @@ async def _train_loop(stop_event: EventClass) -> None:
     running_tasks: set[asyncio.Task] = set()
 
     while not stop_event.is_set():
+        await asyncio.sleep(0.5)
+        continue
+
         try:
             # Clean up completed tasks
             running_tasks = {task for task in running_tasks if not task.done()}

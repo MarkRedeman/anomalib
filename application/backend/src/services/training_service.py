@@ -1,6 +1,5 @@
 # Copyright (C) 2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-import asyncio
 import logging
 
 from anomalib.data import Folder
@@ -61,7 +60,7 @@ class TrainingService:
         try:
             # Use asyncio.to_thread to keep event loop responsive
             # TODO: Consider ProcessPoolExecutor for true parallelism with multiple jobs
-            trained_model = await asyncio.to_thread(cls._train_model, model)
+            trained_model = cls._train_model(model)
             if trained_model is None:
                 raise ValueError("Training failed - model is None")
 
