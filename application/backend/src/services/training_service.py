@@ -1,4 +1,3 @@
-# Copyright (C) 2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 import asyncio
 import logging
@@ -16,6 +15,92 @@ from services.job_service import JobService
 from utils import is_platform_darwin
 
 logger = logging.getLogger(__name__)
+
+from pytorch_lightning.loggers import Logger
+import trackio
+from trackio import TrackioImage, TrackioVideo
+from typing import Any, Dict, Optional, Union
+
+
+class HFTrackioLogger(Logger):
+    def __init__(
+        self,
+        project: str,
+        name: Optional[str] = None,
+        space_id: Optional[str] = None,
+        resume: str = "never",
+        private: Optional[bool] = None,
+        config: Optional[dict] = None,
+        embed: bool = True,
+    ):
+        super().__init__()
+        self._project = project
+        self._name = name
+        self._space_id = space_id
+        self._resume = resume
+        self._private = private
+        self._config = config or {}
+        self._embed = embed
+
+        # Initialize run
+        self.run = trackio.init(
+            project=self._project,
+            name=self._name,
+            space_id=self._space_id,
+            resume=self._resume,
+            private=self._private,
+            config=self._config,
+            embed=self._embed,
+        )
+
+    @property
+    def name(self) -> str:
+        return self._name or self._project
+
+    @property
+    def version(self) -> str:
+        # You might use some attribute of trackio.Run if exists
+        return f"run_{id(self.run)}"
+
+    def log_hyperparams(self, params: Union[Dict[str, Any], Any]) -> None:
+        # Pass hyperparams via config if possible, or log as metrics
+        params_dict = dict(params) if not isinstance(params, dict) else params
+        # One option: include in config during init; if already initialized,
+        # log them as metrics at step=0 or custom logic
+        trackio.log({f"hyperparams/{k}": v for k, v in params_dict.items()}, step=0)
+
+    def log_metrics(
+        self, metrics: Dict[str, float], step: Optional[int] = None
+    ) -> None:
+        # This handles normal metrics
+        trackio.log(metrics, step=step)
+
+    def log_image(
+        self,
+        name: str,
+        image,
+        caption: Optional[str] = None,
+        step: Optional[int] = None,
+    ) -> None:
+        # If anomalib produces images
+        img = TrackioImage(image, caption=caption)
+        trackio.log({name: img}, step=step)
+
+    def log_video(
+        self,
+        name: str,
+        video,
+        caption: Optional[str] = None,
+        fps: Optional[int] = None,
+        format: Optional[str] = None,
+        step: Optional[int] = None,
+    ) -> None:
+        vid = TrackioVideo(video, caption=caption, fps=fps, format=format)
+        trackio.log({name: vid}, step=step)
+
+    def finalize(self, status: str) -> None:
+        # PyTorch Lightning calls logger.finalize("success" / "failed" etc.)
+        trackio.finish()
 
 
 class TrainingService:
@@ -47,7 +132,9 @@ class TrainingService:
             logger.info("No pending training job")
             return None
         # Mark job as running
-        await job_service.update_job_status(job_id=job.id, status=JobStatus.RUNNING, message="Training started")
+        await job_service.update_job_status(
+            job_id=job.id, status=JobStatus.RUNNING, message="Training started"
+        )
 
         project_id = job.project_id
         model_name = job.payload.get("model_name")
@@ -76,9 +163,13 @@ class TrainingService:
             )
             if model.export_path:
                 logger.warning("Deleting partially created model with id: %s", model.id)
-                model_binary_repo = ModelBinaryRepository(project_id=project_id, model_id=model.id)
+                model_binary_repo = ModelBinaryRepository(
+                    project_id=project_id, model_id=model.id
+                )
                 await model_binary_repo.delete_model_folder()
-                await model_service.delete_model(project_id=project_id, model_id=model.id)
+                await model_service.delete_model(
+                    project_id=project_id, model_id=model.id
+                )
             raise e
 
     @staticmethod
@@ -96,7 +187,9 @@ class TrainingService:
         Returns:
             Model: Trained model with updated export_path and is_ready=True
         """
-        model_binary_repo = ModelBinaryRepository(project_id=model.project_id, model_id=model.id)
+        model_binary_repo = ModelBinaryRepository(
+            project_id=model.project_id, model_id=model.id
+        )
         image_binary_repo = ImageBinaryRepository(project_id=model.project_id)
         image_folder_path = image_binary_repo.project_folder_path
         model.export_path = model_binary_repo.model_folder_path
@@ -108,11 +201,16 @@ class TrainingService:
             normal_dir=image_folder_path,
             test_split_mode=TestSplitMode.SYNTHETIC,
         )
-        logger.info(f"Training from image folder: {image_folder_path} to model folder: {model.export_path}")
+        logger.info(
+            f"Training from image folder: {image_folder_path} to model folder: {model.export_path}"
+        )
 
         # Initialize anomalib model and engine
         anomalib_model = get_model(model=model.name)
-        engine = Engine(default_root_dir=model.export_path)
+        trackio_logger = HFTrackioLogger(project=name)
+        engine = Engine(
+            default_root_dir=model.export_path, logger=trackio_logger, max_epochs=50
+        )
 
         # Execute training and export
         export_format = ExportType.OPENVINO
