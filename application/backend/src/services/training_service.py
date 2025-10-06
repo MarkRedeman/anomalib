@@ -65,13 +65,17 @@ class TrainingService:
                 raise ValueError("Training failed - model is None")
 
             await job_service.update_job_status(
-                job_id=job.id, status=JobStatus.COMPLETED, message="Training completed successfully"
+                job_id=job.id,
+                status=JobStatus.COMPLETED,
+                message="Training completed successfully",
             )
             return await model_service.create_model(trained_model)
         except Exception as e:
             logger.exception("Failed to train pending training job: %s", e)
             await job_service.update_job_status(
-                job_id=job.id, status=JobStatus.FAILED, message=f"Failed with exception: {str(e)}"
+                job_id=job.id,
+                status=JobStatus.FAILED,
+                message=f"Failed with exception: {str(e)}",
             )
             if model.export_path:
                 logger.warning("Deleting partially created model with id: %s", model.id)

@@ -43,7 +43,9 @@ async def get_model_info_by_id(
         raise ResourceNotFoundException(resource_id=model_id, resource_name="model")
     return model
 
+
 DeviceType = Literal["AUTO", "CPU", "GPU", "NPU"]
+
 
 @model_router.post("/{model_id}:predict")
 async def predict(
@@ -52,7 +54,7 @@ async def predict(
     project_id: Annotated[UUID, Depends(get_project_id)],
     model_id: Annotated[UUID, Depends(get_model_id)],
     file: Annotated[UploadFile, Depends(MediaRestValidator.validate_image_file)],
-    device: DeviceType = "CPU"
+    device: DeviceType = "CPU",
 ) -> PredictionResponse:
     """
     Run prediction on an uploaded image using the specified model.

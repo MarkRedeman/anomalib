@@ -92,7 +92,7 @@ class ModelService:
         model: Model,
         image_bytes: bytes,
         cached_models: dict[UUID, OpenVINOInferencer] | None = None,
-        device: str = "CPU"
+        device: str = "CPU",
     ) -> PredictionResponse:
         """
         Run prediction on an image using the specified model.

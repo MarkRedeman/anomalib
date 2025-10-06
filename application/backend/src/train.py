@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+
 from services.training_service import TrainingService
 
 logger = logging.getLogger(__name__)
