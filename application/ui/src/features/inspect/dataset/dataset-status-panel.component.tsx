@@ -175,12 +175,9 @@ const TrainingInProgressList = () => {
     const { jobs } = useProjectTrainingJobs();
 
     return (
-        <>
-            <Flex direction={'column'} gap={'size-50'}>
-                {jobs?.map((job) => <TrainingInProgress job={job} key={job.id} />)}
-            </Flex>
-            <Divider size={'S'} />
-        </>
+        <Flex direction={'column'} gap={'size-50'}>
+            {jobs?.map((job) => <TrainingInProgress job={job} key={job.id} />)}
+        </Flex>
     );
 };
 
