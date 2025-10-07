@@ -7,6 +7,7 @@ import { Button, Flex, Loading, toast, View } from '@geti/ui';
 import { Play } from '@geti/ui/icons';
 
 import { useWebRTCConnection } from '../../../components/stream/web-rtc-connection-provider';
+import { AnomalyImage } from '../anomaly-image';
 import { Stream } from './stream';
 
 import classes from '../inference.module.scss';
@@ -23,9 +24,19 @@ export const StreamContainer = () => {
 
     return (
         <View gridArea={'canvas'} overflow={'hidden'} maxHeight={'100%'}>
+            <div className={classes.canvasContainer}>
+                <AnomalyImage />
+            </div>
+        </View>
+    );
+
+    return (
+        <View gridArea={'canvas'} overflow={'hidden'} maxHeight={'100%'}>
             {status === 'idle' && (
                 <div className={classes.canvasContainer}>
                     <View backgroundColor={'gray-200'} width='90%' height='90%'>
+                        <AnomalyImage />
+
                         <Flex alignItems={'center'} justifyContent={'center'} height='100%'>
                             <Button onPress={start} UNSAFE_className={classes.playButton} aria-label={'Start stream'}>
                                 <Play width='128px' height='128px' />
