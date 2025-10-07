@@ -16,6 +16,7 @@ from utils import is_platform_darwin
 logger = logging.getLogger(__name__)
 
 from pytorch_lightning.loggers import Logger
+
 import trackio
 from trackio import TrackioImage, TrackioVideo
 from typing import Any, Dict, Optional, Union
@@ -211,9 +212,12 @@ class TrainingService:
 
         # Initialize anomalib model and engine
         anomalib_model = get_model(model=model.name)
-        trackio_logger = HFTrackioLogger(project=name)
+        # trackio_logger = HFTrackioLogger(project=name)
         engine = Engine(
-            default_root_dir=model.export_path, logger=trackio_logger, max_epochs=50
+            default_root_dir=model.export_path,
+            # logger=trackio_logger,
+            max_epochs=50,
+            accelerator="cpu",
         )
 
         # Execute training and export
