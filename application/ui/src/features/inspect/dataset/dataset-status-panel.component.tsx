@@ -112,8 +112,21 @@ const useProjectTrainingJobs = () => {
 };
 
 const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
-    if (job === undefined || job.status === 'completed') {
+    if (job === undefined) {
         return null;
+    }
+    const name = job.payload['model_name'];
+    if (job.status === 'completed') {
+        return (
+            <InlineAlert variant='positive'>
+                <Heading>{name} - Training finished</Heading>
+                <Content>
+                    <Flex direction={'column'} gap={'size-100'}>
+                        <Text>{job.message}</Text>
+                    </Flex>
+                </Content>
+            </InlineAlert>
+        );
     }
 
     if (job.status === 'pending') {
@@ -172,7 +185,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
 const TrainingInProgressList = () => {
     const { jobs } = useProjectTrainingJobs();
 
-    return null;
+    //return null;
     return (
         <Flex direction={'column'} gap={'size-50'}>
             {jobs?.map((job) => <TrainingInProgress job={job} key={job.id} />)}
