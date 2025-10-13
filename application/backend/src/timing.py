@@ -1,4 +1,10 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
 import time
+
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
 
 
 class ServerTimingCollector:
@@ -101,11 +107,11 @@ class ServerTimingCollector:
         Returns:
             A string suitable for the Server-Timing header.
         """
-        return ", ".join(f"{t['name']};dur={t['dur']:.2f}" for t in self.timings if t["dur"] is not None)
-
-
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+        return ", ".join(
+            f"{t['name']};dur={t['dur']:.2f}"
+            for t in self.timings
+            if t["dur"] is not None
+        )
 
 
 class ServerTimingMiddleware(BaseHTTPMiddleware):

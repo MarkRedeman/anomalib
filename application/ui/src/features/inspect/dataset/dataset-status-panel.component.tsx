@@ -108,7 +108,7 @@ const useProjectTrainingJobs = () => {
         },
     });
 
-    return { jobs: data?.jobs };
+    return { jobs: [...(data?.jobs ?? [])].reverse() };
 };
 
 const TrainingInProgress = ({ job }: TrainingInProgressProps) => {

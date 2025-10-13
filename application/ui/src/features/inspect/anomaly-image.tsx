@@ -1,5 +1,6 @@
 import { Dispatch, RefObject, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 
+import { useProjectIdentifier } from '@geti-inspect/hooks';
 import { ZoomTransform } from 'src/components/zoom/zoom-transform';
 
 import { useInspect } from './inspect-provider';
@@ -10,10 +11,84 @@ interface AnomalyOverlayProps {
     opacity: number;
 }
 
+const useUrl = () => {
+    const inspect = useInspect();
+    const { projectId: project_id } = useProjectIdentifier();
+
+    if (inspect.selectedImageId === undefined) {
+        return null;
+    }
+
+    const mediaUrl = `/api/projects/${project_id}/images/${inspect.selectedImageId}/full`;
+
+    return mediaUrl;
+};
+
+interface DrawImageOnCanvasProps {
+    image: ImageData | undefined;
+    enabled?: boolean;
+}
+
+export const loadImage = (link: string): Promise<HTMLImageElement> => {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.crossOrigin = 'use-credentials';
+
+        image.onload = () => resolve(image);
+        image.onerror = (error) => reject(error);
+
+        image.fetchPriority = 'high';
+        image.src = link;
+
+        if (process.env.NODE_ENV === 'test') {
+            // Immediately load the media item's image
+            resolve(image);
+        }
+    });
+};
+
+export const drawImageOnCanvas = (img: HTMLImageElement, filter = ''): HTMLCanvasElement => {
+    const canvas: HTMLCanvasElement = document.createElement('canvas');
+
+    canvas.width = img.naturalWidth ? img.naturalWidth : img.width;
+    canvas.height = img.naturalHeight ? img.naturalHeight : img.height;
+
+    const ctx = canvas.getContext('2d');
+
+    if (ctx) {
+        const width = img.naturalWidth ? img.naturalWidth : img.width;
+        const height = img.naturalHeight ? img.naturalHeight : img.height;
+
+        ctx.filter = filter;
+        ctx.drawImage(img, 0, 0, width, height);
+    }
+
+    return canvas;
+};
+
+export const getImageData = (img: HTMLImageElement): ImageData => {
+    // Always return valid imageData, even if the image isn't loaded yet.
+    if (img.width === 0 && img.height === 0) {
+        return new ImageData(1, 1);
+    }
+
+    const canvas = drawImageOnCanvas(img);
+    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+
+    const width = img.naturalWidth ? img.naturalWidth : img.width;
+    const height = img.naturalHeight ? img.naturalHeight : img.height;
+
+    return ctx.getImageData(0, 0, width, height);
+};
+
+//const image = await loadImage(mediaItem.src);
+//return getImageData(image);
+
 const AnomalyOverlay = ({ file, anomaly_map, opacity }: AnomalyOverlayProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const imageUrl = useUrl();
 
     useEffect(() => {
         if (!file) return;
@@ -27,23 +102,32 @@ const AnomalyOverlay = ({ file, anomaly_map, opacity }: AnomalyOverlayProps) => 
                 height: img.height,
             });
 
+            const width = img.naturalWidth ? img.naturalWidth : img.width;
+            const height = img.naturalHeight ? img.naturalHeight : img.height;
+
             const canvas = canvasRef.current;
+            console.log('loaded image?', this, canvas);
             if (canvas) {
                 const ctx = canvas.getContext('2d');
+                console.log('got canvas?');
                 if (ctx) {
+                    console.log('drawing');
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
+                    //ctx.putImageData(img, 0, 0);
+                    ctx.drawImage(img, 0, 0, width, height);
                 }
             }
         };
 
-        img.src = fileUrl;
+        img.src = imageUrl ?? fileUrl;
 
         return () => {
             URL.revokeObjectURL(fileUrl);
         };
-    }, [file]);
+    }, [file, imageUrl]);
+
+    const src = `data:image/png;base64,${anomaly_map}`;
 
     return (
         <ZoomTransform target={dimensions}>
@@ -52,9 +136,24 @@ const AnomalyOverlay = ({ file, anomaly_map, opacity }: AnomalyOverlayProps) => 
                 style={{ position: 'relative', width: dimensions.width, height: dimensions.height }}
             >
                 <canvas ref={canvasRef} width={dimensions.width} height={dimensions.height} />
+                {imageUrl && (
+                    <img
+                        src={imageUrl}
+                        width={dimensions.width}
+                        height={dimensions.height}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            pointerEvents: 'none',
+                        }}
+                    />
+                )}
                 {anomaly_map && dimensions.width > 0 && (
                     <img
-                        src={`data:image/png;base64,${anomaly_map}`}
+                        src={src}
                         style={{
                             position: 'absolute',
                             top: 0,
