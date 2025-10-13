@@ -15,6 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse, Response
 
+from timing import ServerTimingMiddleware
 from api.endpoints.job_endpoints import job_router
 from api.endpoints.media_endpoints import media_router
 from api.endpoints.model_endpoints import model_router
@@ -35,6 +36,10 @@ app = FastAPI(
     redoc_url=None,
     docs_url=None,
 )
+
+# Register middleware, passing in the dependency callable
+app.add_middleware(ServerTimingMiddleware)
+
 
 # TODO: check if middleware is required
 # Enable CORS for local test UI
