@@ -1,4 +1,6 @@
-import { Flex, Grid, Tabs, View } from '@geti/ui';
+import { Suspense } from 'react';
+
+import { Flex, Grid, IntelBrandedLoading, Tabs, View } from '@geti/ui';
 import { Outlet, useLocation } from 'react-router';
 
 import { ProjectsListPanel } from './features/inspect/projects-management/projects-list-panel.component';
@@ -38,7 +40,9 @@ export const Layout = () => {
             >
                 <Header />
                 <View backgroundColor={'gray-50'} gridArea={'content'}>
-                    <Outlet />
+                    <Suspense fallback={<IntelBrandedLoading />}>
+                        <Outlet />
+                    </Suspense>
                 </View>
             </Grid>
         </Tabs>
