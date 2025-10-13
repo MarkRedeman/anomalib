@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 import logging
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, UploadFile
@@ -44,6 +44,9 @@ async def get_model_info_by_id(
     return model
 
 
+DeviceType = Literal["AUTO", "CPU", "GPU", "NPU"]
+
+
 @model_router.post("/{model_id}:predict")
 async def predict(
     request: Request,
@@ -51,6 +54,7 @@ async def predict(
     project_id: Annotated[UUID, Depends(get_project_id)],
     model_id: Annotated[UUID, Depends(get_model_id)],
     file: Annotated[UploadFile, Depends(MediaRestValidator.validate_image_file)],
+    device: DeviceType = "CPU",
 ) -> PredictionResponse:
     """
     Run prediction on an uploaded image using the specified model.
@@ -65,4 +69,4 @@ async def predict(
     # Read uploaded image and run prediction with model caching
     # Models are cached in request.app.state.active_models for performance
     image_bytes = await file.read()
-    return await model_service.predict_image(model, image_bytes, request.app.state.active_models)
+    return await model_service.predict_image(model, image_bytes, request.app.state.active_models, device=device)

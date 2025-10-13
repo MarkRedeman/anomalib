@@ -88,7 +88,11 @@ class ModelService:
         return await asyncio.to_thread(OpenVINOInferencer, path=model_path, device=device)
 
     async def predict_image(
-        self, model: Model, image_bytes: bytes, cached_models: dict[UUID, OpenVINOInferencer] | None = None
+        self,
+        model: Model,
+        image_bytes: bytes,
+        cached_models: dict[UUID, OpenVINOInferencer] | None = None,
+        device: str = "CPU",
     ) -> PredictionResponse:
         """
         Run prediction on an image using the specified model.
@@ -105,10 +109,10 @@ class ModelService:
             PredictionResponse: Structured prediction results
         """
         # Use cached model if available, otherwise load it
-        if cached_models and model.id in cached_models:
+        if cached_models and model.id in cached_models and cached_models[model.id].device == device:
             inference_model = cached_models[model.id]
         else:
-            inference_model = await self.load_inference_model(model)
+            inference_model = await self.load_inference_model(model, device=device)
             if cached_models is not None:
                 cached_models[model.id] = inference_model
 
