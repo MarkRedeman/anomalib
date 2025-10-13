@@ -1,8 +1,8 @@
 # Copyright (C) 2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
-import logging
 import atexit
+import logging
 import multiprocessing as mp
 import os
 import queue

@@ -13,11 +13,11 @@ import numpy as np
 from anomalib.deploy import ExportType, OpenVINOInferencer
 from PIL import Image
 
-from timing import ServerTimingCollector
 from db import get_async_db_session_ctx
 from pydantic_models import Model, ModelList, PredictionLabel, PredictionResponse
 from repositories import ModelRepository
 from repositories.binary_repo import ModelBinaryRepository
+from timing import ServerTimingCollector
 
 logger = logging.getLogger(__name__)
 

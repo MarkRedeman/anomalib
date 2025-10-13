@@ -12,26 +12,25 @@ from pydantic_models import JobStatus, Model
 from repositories.binary_repo import ImageBinaryRepository, ModelBinaryRepository
 from services import ModelService
 from services.job_service import JobService
-from utils import is_platform_darwin
 
 logger = logging.getLogger(__name__)
 
-from pytorch_lightning.loggers import Logger
+from typing import Any
 
 import trackio
+from pytorch_lightning.loggers import Logger
 from trackio import TrackioImage, TrackioVideo
-from typing import Any, Dict, Optional, Union
 
 
 class HFTrackioLogger(Logger):
     def __init__(
         self,
         project: str,
-        name: Optional[str] = None,
-        space_id: Optional[str] = None,
+        name: str | None = None,
+        space_id: str | None = None,
         resume: str = "never",
-        private: Optional[bool] = None,
-        config: Optional[dict] = None,
+        private: bool | None = None,
+        config: dict | None = None,
         embed: bool = True,
     ):
         super().__init__()
@@ -63,7 +62,7 @@ class HFTrackioLogger(Logger):
         # You might use some attribute of trackio.Run if exists
         return f"run_{id(self.run)}"
 
-    def log_hyperparams(self, params: Union[Dict[str, Any], Any]) -> None:
+    def log_hyperparams(self, params: dict[str, Any] | Any) -> None:
         # Pass hyperparams via config if possible, or log as metrics
         params_dict = dict(params) if not isinstance(params, dict) else params
         # One option: include in config during init; if already initialized,
@@ -71,7 +70,7 @@ class HFTrackioLogger(Logger):
         trackio.log({f"hyperparams/{k}": v for k, v in params_dict.items()}, step=0)
 
     def log_metrics(
-        self, metrics: Dict[str, float], step: Optional[int] = None
+        self, metrics: dict[str, float], step: int | None = None
     ) -> None:
         # This handles normal metrics
         trackio.log(metrics, step=step)
@@ -80,8 +79,8 @@ class HFTrackioLogger(Logger):
         self,
         name: str,
         image,
-        caption: Optional[str] = None,
-        step: Optional[int] = None,
+        caption: str | None = None,
+        step: int | None = None,
     ) -> None:
         # If anomalib produces images
         img = TrackioImage(image, caption=caption)
@@ -91,10 +90,10 @@ class HFTrackioLogger(Logger):
         self,
         name: str,
         video,
-        caption: Optional[str] = None,
-        fps: Optional[int] = None,
-        format: Optional[str] = None,
-        step: Optional[int] = None,
+        caption: str | None = None,
+        fps: int | None = None,
+        format: str | None = None,
+        step: int | None = None,
     ) -> None:
         vid = TrackioVideo(video, caption=caption, fps=fps, format=format)
         trackio.log({name: vid}, step=step)

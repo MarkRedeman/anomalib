@@ -15,7 +15,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse, Response
 
-from timing import ServerTimingMiddleware
 from api.endpoints.job_endpoints import job_router
 from api.endpoints.media_endpoints import media_router
 from api.endpoints.model_endpoints import model_router
@@ -27,6 +26,7 @@ from api.endpoints.trainable_models_endpoints import router as trainable_model_r
 from api.endpoints.webrtc import router as webrtc_router
 from core.lifecycle import lifespan
 from exceptions import GetiBaseException
+from timing import ServerTimingMiddleware
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,4 @@
 import time
-from typing import List, Dict, Optional
 
 
 class ServerTimingCollector:
@@ -12,7 +11,7 @@ class ServerTimingCollector:
         """
         Initialize the timings list.
         """
-        self.timings: List[Dict[str, Optional[float]]] = []
+        self.timings: list[dict[str, float | None]] = []
 
     class Timer:
         """
@@ -29,8 +28,8 @@ class ServerTimingCollector:
             """
             self.collector: ServerTimingCollector = collector
             self.name: str = name
-            self.start: Optional[float] = None
-            self.index: Optional[int] = None  # index in collector.timings
+            self.start: float | None = None
+            self.index: int | None = None  # index in collector.timings
 
         def __enter__(self) -> "ServerTimingCollector.Timer":
             """
