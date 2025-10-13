@@ -38,9 +38,11 @@ async def get_scheduler(request: Request) -> Scheduler:
     return request.app.state.scheduler
 
 
-async def get_model_service(scheduler: Annotated[Scheduler, Depends(get_scheduler)]) -> ModelService:
+async def get_model_service(request: Request, scheduler: Annotated[Scheduler, Depends(get_scheduler)]) -> ModelService:
     """Provides a ModelService with access to the model reload event"""
-    return ModelService(mp_model_reload_event=scheduler.mp_model_reload_event)
+    return ModelService(
+        timing_collector=request.state.server_timing, mp_model_reload_event=scheduler.mp_model_reload_event
+    )
 
 
 @lru_cache

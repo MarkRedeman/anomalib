@@ -48,14 +48,6 @@ async def get_model_info_by_id(
 DeviceType = Literal["AUTO", "CPU", "GPU", "NPU"]
 
 
-# # Example route using the collector as a dependency
-# @app.get("/")
-# async def hello():
-#     with collector.time("db"):
-#         time.sleep(0.05)
-#     with collector.time("external_api"):
-#         time.sleep(0.03)
-#     return {"message": "Hello, world!"}
 @model_router.post("/{model_id}:predict")
 async def predict(
     request: Request,
@@ -70,7 +62,7 @@ async def predict(
 
     Returns prediction results including anomaly map, label, and confidence score.
     """
-    async with request.state.server_timing.time("get_model"):
+    async with request.state.server_timing.time("predict_get_model"):
         # Get model from database
         model = await model_service.get_model_by_id(project_id=project_id, model_id=model_id)
         if model is None:
@@ -78,8 +70,8 @@ async def predict(
 
     # Read uploaded image and run prediction with model caching
     # Models are cached in request.app.state.active_models for performance
-    async with request.state.server_timing.time("read_image"):
+    async with request.state.server_timing.time("predict_read_image"):
         image_bytes = await file.read()
 
-    async with request.state.server_timing.time("predict"):
+    async with request.state.server_timing.time("predict_predict"):
         return await model_service.predict_image(model, image_bytes, request.app.state.active_models, device=device)

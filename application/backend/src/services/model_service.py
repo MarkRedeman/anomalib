@@ -13,6 +13,7 @@ import numpy as np
 from anomalib.deploy import ExportType, OpenVINOInferencer
 from PIL import Image
 
+from timing import ServerTimingCollector
 from db import get_async_db_session_ctx
 from pydantic_models import Model, ModelList, PredictionLabel, PredictionResponse
 from repositories import ModelRepository
@@ -37,8 +38,15 @@ class ModelService:
     to maintain event loop responsiveness.
     """
 
-    def __init__(self, mp_model_reload_event: EventClass | None = None) -> None:
+    def __init__(
+        self, timing_collector: ServerTimingCollector | None = None, mp_model_reload_event: EventClass | None = None
+    ) -> None:
         self._mp_model_reload_event = mp_model_reload_event
+
+        if timing_collector is None:
+            timing_collector = ServerTimingCollector()
+
+        self.timing_collector = timing_collector
 
     def activate_model(self) -> None:
         """Notify workers to (re)load the active model.
@@ -109,16 +117,18 @@ class ModelService:
             PredictionResponse: Structured prediction results
         """
         # Use cached model if available, otherwise load it
-        if cached_models and model.id in cached_models and cached_models[model.id].device == device:
-            inference_model = cached_models[model.id]
-        else:
-            inference_model = await self.load_inference_model(model, device=device)
-            if cached_models is not None:
-                cached_models[model.id] = inference_model
+        async with self.timing_collector.time("model_service_load_model"):
+            if cached_models and model.id in cached_models and cached_models[model.id].device == device:
+                inference_model = cached_models[model.id]
+            else:
+                inference_model = await self.load_inference_model(model, device=device)
+                if cached_models is not None:
+                    cached_models[model.id] = inference_model
 
         # Run entire prediction pipeline in a single thread
         # This includes image processing, model inference, and result processing
-        response_data = await asyncio.to_thread(self._run_prediction_pipeline, inference_model, image_bytes)
+        async with self.timing_collector.time("model_service_infer"):
+            response_data = await asyncio.to_thread(self._run_prediction_pipeline, inference_model, image_bytes)
 
         return PredictionResponse(**response_data)
 
