@@ -79,9 +79,8 @@ export const InferenceResult = () => {
         );
     }
 
+    const mediaUrl = `/api/projects/${selectedMediaItem.project_id}/images/${selectedMediaItem.id}/full`;
     if (isPending || inferenceResult === undefined) {
-        const mediaUrl = `/api/projects/${selectedMediaItem.project_id}/images/${selectedMediaItem.id}/full`;
-
         return (
             <View gridArea={'canvas'} UNSAFE_className={styles.canvasContainer} position={'relative'}>
                 <img
@@ -106,6 +105,7 @@ export const InferenceResult = () => {
             UNSAFE_className={styles.canvasContainer}
         >
             <LabelScore label={inferenceResult.label} score={inferenceResult.score} />
+            <img src={mediaUrl} alt={selectedMediaItem.filename} className={clsx(styles.img, styles.inferencedImage)} />
             <img src={src} alt={selectedMediaItem.filename} className={clsx(styles.img, styles.inferencedImage)} />
         </Grid>
     );
