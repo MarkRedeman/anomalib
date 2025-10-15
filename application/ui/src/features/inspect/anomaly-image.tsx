@@ -106,15 +106,11 @@ const AnomalyOverlay = ({ file, anomaly_map, opacity }: AnomalyOverlayProps) => 
             const height = img.naturalHeight ? img.naturalHeight : img.height;
 
             const canvas = canvasRef.current;
-            console.log('loaded image?', this, canvas);
             if (canvas) {
                 const ctx = canvas.getContext('2d');
-                console.log('got canvas?');
                 if (ctx) {
-                    console.log('drawing');
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    //ctx.putImageData(img, 0, 0);
                     ctx.drawImage(img, 0, 0, width, height);
                 }
             }
