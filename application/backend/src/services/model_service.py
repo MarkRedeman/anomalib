@@ -22,6 +22,7 @@ from pydantic_models.model import SupportedDevices
 from repositories import ModelRepository
 from repositories.binary_repo import ModelBinaryRepository
 from services.exceptions import DeviceNotFoundError
+from timing import ServerTimingCollector
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,17 @@ class ModelService:
     to maintain event loop responsiveness.
     """
 
-    def __init__(self, mp_model_reload_event: EventClass | None = None) -> None:
+    def __init__(
+        self,
+        timing_collector: ServerTimingCollector | None = None,
+        mp_model_reload_event: EventClass | None = None,
+    ) -> None:
         self._mp_model_reload_event = mp_model_reload_event
+
+        if timing_collector is None:
+            timing_collector = ServerTimingCollector()
+
+        self.timing_collector = timing_collector
 
     def activate_model(self) -> None:
         """Notify workers to (re)load the active model.
@@ -88,7 +98,9 @@ class ModelService:
             return await repo.delete_by_id(model_id)
 
     @classmethod
-    async def load_inference_model(cls, model: Model, device: str | None = None) -> OpenVINOInferencer:
+    async def load_inference_model(
+        cls, model: Model, device: str | None = None
+    ) -> OpenVINOInferencer:
         """Load a model for inference using the anomalib OpenVINO inferencer.
 
         Args:
@@ -96,10 +108,16 @@ class ModelService:
             device: Device to use for inference. If None, defaults to "AUTO"
         """
         if model.format is not ExportType.OPENVINO:
-            raise NotImplementedError(f"Model format {model.format} is not supported for inference at this moment.")
+            raise NotImplementedError(
+                f"Model format {model.format} is not supported for inference at this moment."
+            )
 
-        model_bin_repo = ModelBinaryRepository(project_id=model.project_id, model_id=model.id)
-        model_path = model_bin_repo.get_weights_file_path(format=model.format, name="model.xml")
+        model_bin_repo = ModelBinaryRepository(
+            project_id=model.project_id, model_id=model.id
+        )
+        model_path = model_bin_repo.get_weights_file_path(
+            format=model.format, name="model.xml"
+        )
         _device = device or DEFAULT_DEVICE
         try:
             return await asyncio.to_thread(
@@ -134,29 +152,35 @@ class ModelService:
         Returns:
             PredictionResponse: Structured prediction results
         """
-        # Determine if we can use cached model (must exist and device must match if specified)
-        use_cached = (
-            cached_models is not None
-            and model.id in cached_models
-            and (device is None or cached_models[model.id].device == device)
-        )
+        async with self.timing_collector.time("model_service_load_model"):
+            # Determine if we can use cached model (must exist and device must match if specified)
+            use_cached = (
+                cached_models is not None
+                and model.id in cached_models
+                and (device is None or cached_models[model.id].device == device)
+            )
 
-        if use_cached:
-            inference_model = cached_models[model.id]
-        else:
-            logger.info(f"Loading model with device: {device or DEFAULT_DEVICE}")
-            inference_model = await self.load_inference_model(model, device=device)
-            if cached_models is not None:
-                cached_models[model.id] = inference_model
+            if use_cached:
+                inference_model = cached_models[model.id]
+            else:
+                logger.info(f"Loading model with device: {device or DEFAULT_DEVICE}")
+                inference_model = await self.load_inference_model(model, device=device)
+                if cached_models is not None:
+                    cached_models[model.id] = inference_model
 
         # Run entire prediction pipeline in a single thread
         # This includes image processing, model inference, and result processing
-        response_data = await asyncio.to_thread(self._run_prediction_pipeline, inference_model, image_bytes)
+        async with self.timing_collector.time("model_service_infer"):
+            response_data = await asyncio.to_thread(
+                self._run_prediction_pipeline, inference_model, image_bytes
+            )
 
         return PredictionResponse(**response_data)
 
     @staticmethod
-    def _run_prediction_pipeline(inference_model: OpenVINOInferencer, image_bytes: bytes) -> dict:
+    def _run_prediction_pipeline(
+        inference_model: OpenVINOInferencer, image_bytes: bytes
+    ) -> dict:
         """Run the complete prediction pipeline in a single thread."""
         # Process image
         npd = np.frombuffer(image_bytes, np.uint8)
@@ -183,7 +207,11 @@ class ModelService:
             im_base64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
         # Create response data
-        label = PredictionLabel.ANOMALOUS if pred.pred_label.item() else PredictionLabel.NORMAL
+        label = (
+            PredictionLabel.ANOMALOUS
+            if pred.pred_label.item()
+            else PredictionLabel.NORMAL
+        )
         score = float(pred.pred_score.item())
 
         return {"anomaly_map": im_base64, "label": label, "score": score}

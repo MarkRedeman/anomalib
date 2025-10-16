@@ -6,7 +6,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, UploadFile, HTTPException, status
 
-from api.dependencies import get_model_id, get_model_service, get_project_id, get_device_name
+from api.dependencies import (
+    get_model_id,
+    get_model_service,
+    get_project_id,
+    get_device_name,
+)
+
+# from timing import ServerTimingCollector
 from api.endpoints.project_endpoints import project_api_prefix_url
 from api.media_rest_validator import MediaRestValidator
 from exceptions import ResourceNotFoundException
@@ -40,7 +47,9 @@ async def get_model_info_by_id(
     model_id: Annotated[UUID, Depends(get_model_id)],
 ) -> Model:
     """Endpoint to get model metadata by ID"""
-    model = await model_service.get_model_by_id(project_id=project_id, model_id=model_id)
+    model = await model_service.get_model_by_id(
+        project_id=project_id, model_id=model_id
+    )
     if model is None:
         raise ResourceNotFoundException(resource_id=model_id, resource_name="model")
     return model
@@ -60,18 +69,27 @@ async def predict(
 
     Returns prediction results including anomaly map, label, and confidence score.
     """
-    # Get model from database
-    model = await model_service.get_model_by_id(project_id=project_id, model_id=model_id)
-    if model is None:
-        raise ResourceNotFoundException(resource_id=model_id, resource_name="model")
+    async with request.state.server_timing.time("predict_get_model"):
+        # Get model from database
+        model = await model_service.get_model_by_id(
+            project_id=project_id, model_id=model_id
+        )
+        if model is None:
+            raise ResourceNotFoundException(resource_id=model_id, resource_name="model")
 
     # Read uploaded image and run prediction with model caching
     # Models are cached in request.app.state.active_models for performance
-    image_bytes = await file.read()
+    async with request.state.server_timing.time("predict_read_image"):
+        image_bytes = await file.read()
     try:
-        return await model_service.predict_image(model, image_bytes, request.app.state.active_models, device=device)
+        async with request.state.server_timing.time("predict_predict"):
+            return await model_service.predict_image(
+                model, image_bytes, request.app.state.active_models, device=device
+            )
     except DeviceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+        image_bytes = await file.read()
 
 
 @model_router.post(":supported-devices")
