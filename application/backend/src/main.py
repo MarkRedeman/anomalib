@@ -26,6 +26,7 @@ from api.endpoints.trainable_models_endpoints import router as trainable_model_r
 from api.endpoints.webrtc import router as webrtc_router
 from core.lifecycle import lifespan
 from exceptions import GetiBaseException
+from timing import ServerTimingMiddleware
 
 # Configure logging before creating the app
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -37,6 +38,10 @@ app = FastAPI(
     redoc_url=None,
     docs_url=None,
 )
+
+# Register middleware, passing in the dependency callable
+app.add_middleware(ServerTimingMiddleware)
+
 
 # TODO: check if middleware is required
 # Enable CORS for local test UI
