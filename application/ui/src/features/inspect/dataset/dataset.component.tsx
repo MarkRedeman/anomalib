@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { TrainModelButton } from '../train-model/train-model-button.component';
 import { DatasetList } from './dataset-list.component';
 import { DatasetStatusPanel } from './dataset-status-panel.component';
+import { REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING } from './utils';
 
 const useMediaItems = () => {
     const { projectId } = useProjectIdentifier();
@@ -107,6 +108,8 @@ const DatasetContent = () => {
 };
 
 export const Dataset = () => {
+    const { mediaItems } = useMediaItems();
+
     return (
         <Flex direction={'column'} height={'100%'}>
             <Heading margin={0}>
@@ -114,7 +117,9 @@ export const Dataset = () => {
                     Dataset
                     <Flex gap='size-200'>
                         <UploadImages />
-                        <TrainModelButton />
+                        <TrainModelButton
+                            isDisabled={mediaItems.length < REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING}
+                        />
                     </Flex>
                 </Flex>
             </Heading>
