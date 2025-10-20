@@ -24,6 +24,10 @@ const useMediaItems = () => {
     };
 };
 
+const TrainButton = () => {
+    return <Button onPress={() => alert('Train')}>Train</Button>;
+};
+
 const UploadImages = () => {
     const { projectId } = useProjectIdentifier();
     const queryClient = useQueryClient();
@@ -47,9 +51,22 @@ const UploadImages = () => {
         const succeeded = promises.filter((result) => result.status === 'fulfilled').length;
         const failed = promises.filter((result) => result.status === 'rejected').length;
 
-        await queryClient.invalidateQueries({
-            queryKey: ['get', '/api/projects/{project_id}/images'],
+        const imagesOptions = $api.queryOptions('get', '/api/projects/{project_id}/images', {
+            params: { path: { project_id: projectId } },
         });
+        await queryClient.invalidateQueries({ queryKey: imagesOptions.queryKey });
+        const images = await queryClient.ensureQueryData(imagesOptions);
+
+        //const images = await queryClient.fetchQuery(imagesOptions);
+        if (images.media.length > 20) {
+            toast({
+                type: 'info',
+                message: `You can start model training now with your collected dataset.`,
+                duration: Infinity,
+                actionButtons: [<TrainButton />],
+            });
+            return;
+        }
 
         if (failed === 0) {
             toast({ type: 'success', message: `Uploaded ${succeeded} item(s)` });
