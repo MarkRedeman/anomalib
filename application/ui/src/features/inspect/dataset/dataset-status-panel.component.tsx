@@ -15,6 +15,7 @@ import {
     Picker,
     ProgressBar,
     Text,
+    View,
 } from '@geti/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { differenceBy, isEqual } from 'lodash-es';
@@ -229,12 +230,9 @@ const TrainingInProgressList = () => {
     }
 
     return (
-        <>
-            <Flex direction={'column'} gap={'size-50'} height={'size-2000'} UNSAFE_style={{ overflowY: 'auto' }}>
-                {jobs?.map((job) => <TrainingInProgress job={job} key={job.id} />)}
-            </Flex>
-            <Divider size={'S'} />
-        </>
+        <Flex direction={'column'} gap={'size-50'} UNSAFE_style={{ overflowY: 'auto' }}>
+            {jobs?.map((job) => <TrainingInProgress job={job} key={job.id} />)}
+        </Flex>
     );
 };
 
@@ -250,7 +248,6 @@ export const DatasetStatusPanel = ({ mediaItemsCount }: DatasetStatusPanelProps)
     return (
         <Suspense fallback={<IntelBrandedLoading />}>
             <TrainingInProgressList />
-            <ReadyToTrain />
         </Suspense>
     );
 };

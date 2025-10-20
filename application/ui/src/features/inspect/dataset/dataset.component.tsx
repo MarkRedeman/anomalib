@@ -5,6 +5,7 @@ import { useProjectIdentifier } from '@geti-inspect/hooks';
 import { Button, Divider, FileTrigger, Flex, Heading, Loading, toast, View } from '@geti/ui';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { TrainModelButton } from '../train-model/train-model-button.component';
 import { DatasetList } from './dataset-list.component';
 import { DatasetStatusPanel } from './dataset-status-panel.component';
 
@@ -22,10 +23,6 @@ const useMediaItems = () => {
     return {
         mediaItems: data.media,
     };
-};
-
-const TrainButton = () => {
-    return <Button onPress={() => alert('Train')}>Train</Button>;
 };
 
 const UploadImages = () => {
@@ -60,10 +57,12 @@ const UploadImages = () => {
         //const images = await queryClient.fetchQuery(imagesOptions);
         if (images.media.length > 20) {
             toast({
+                title: 'Train',
                 type: 'info',
                 message: `You can start model training now with your collected dataset.`,
                 duration: Infinity,
-                actionButtons: [<TrainButton />],
+                actionButtons: [<TrainModelButton key='train' />],
+                position: 'bottom-left',
             });
             return;
         }
@@ -88,7 +87,7 @@ const UploadImages = () => {
 
     return (
         <FileTrigger allowsMultiple onSelect={captureImages}>
-            <Button>Upload images</Button>
+            <Button variant='secondary'>Upload images</Button>
         </FileTrigger>
     );
 };
@@ -112,7 +111,11 @@ export const Dataset = () => {
         <Flex direction={'column'} height={'100%'}>
             <Heading margin={0}>
                 <Flex justifyContent={'space-between'}>
-                    Dataset <UploadImages />
+                    Dataset
+                    <Flex gap='size-200'>
+                        <UploadImages />
+                        <TrainModelButton />
+                    </Flex>
                 </Flex>
             </Heading>
             <Suspense fallback={<Loading mode={'inline'} />}>
