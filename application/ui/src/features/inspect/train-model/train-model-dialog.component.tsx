@@ -10,6 +10,11 @@ import classes from './train-model.module.scss';
 
 export const TrainModelDialog = ({ close }: { close: () => void }) => {
     const { projectId } = useProjectIdentifier();
+    const startTrainingMutation = $api.useMutation('post', '/api/jobs:train', {
+        meta: {
+            invalidates: [['get', '/api/jobs']],
+        },
+    });
     const startTraining = async () => {
         if (selectedModel === null) {
             return;
@@ -22,7 +27,6 @@ export const TrainModelDialog = ({ close }: { close: () => void }) => {
         close();
     };
     const [selectedModel, setSelectedModel] = useState<string | null>(null);
-    const startTrainingMutation = $api.useMutation('post', '/api/jobs:train');
 
     return (
         <Dialog size='L' UNSAFE_style={{ width: 'fit-content' }}>
