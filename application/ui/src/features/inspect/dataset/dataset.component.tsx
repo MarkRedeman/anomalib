@@ -56,7 +56,7 @@ const UploadImages = () => {
         const images = await queryClient.ensureQueryData(imagesOptions);
 
         //const images = await queryClient.fetchQuery(imagesOptions);
-        if (images.media.length > 20) {
+        if (images.media.length >= 20) {
             toast({
                 title: 'Train',
                 type: 'info',
