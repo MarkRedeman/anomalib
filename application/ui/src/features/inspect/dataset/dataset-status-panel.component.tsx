@@ -3,8 +3,28 @@ import { Suspense, useEffect, useRef } from 'react';
 import { $api } from '@geti-inspect/api';
 import { SchemaJob as Job } from '@geti-inspect/api/spec';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
-import { Content, Flex, Heading, InlineAlert, IntelBrandedLoading, ProgressBar, Text } from '@geti/ui';
-import { useQueryClient } from '@tanstack/react-query';
+import {
+    Button,
+    Content,
+    Dialog,
+    DialogTrigger,
+    Divider,
+    Flex,
+    Heading,
+    InlineAlert,
+    IntelBrandedLoading,
+    Loading,
+    ProgressBar,
+    Text,
+    View,
+} from '@geti/ui';
+import {
+    queryOptions,
+    experimental_streamedQuery as streamedQuery,
+    useQuery,
+    useQueryClient,
+    useSuspenseQuery,
+} from '@tanstack/react-query';
 import { differenceBy, isEqual } from 'lodash-es';
 
 import { REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING } from './utils';
@@ -12,6 +32,113 @@ import { REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING } from './utils';
 interface NotEnoughNormalImagesToTrainProps {
     mediaItemsCount: number;
 }
+
+const answers = [
+    "I'm just an example chat, I can't really answer any questions :(".split(' '),
+    'TanStack is great. Would you like to know more?'.split(' '),
+];
+
+function chatAnswer(_question: string) {
+    return {
+        async *[Symbol.asyncIterator]() {
+            const answer = answers[Math.floor(Math.random() * answers.length)];
+            let index = 0;
+            while (index < answer.length) {
+                console.log('iterate?');
+                //await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 300));
+                console.log('answer?', index);
+                yield answer[index++];
+            }
+        },
+    };
+}
+
+// Function to connect to SSE endpoint and yield data
+function fetchSSE(url: string) {
+    return {
+        async *[Symbol.asyncIterator]() {
+            console.log('OH HI', url);
+            const eventSource = new EventSource(url);
+
+            try {
+                let resolver: ((value: string) => void) | null = null;
+                const getNextMessage = () =>
+                    new Promise<string>((resolve) => {
+                        resolver = resolve;
+                    });
+
+                eventSource.onmessage = (event) => {
+                    if (resolver) {
+                        resolver(JSON.parse(event.data));
+                        resolver = null;
+                    }
+                };
+
+                // Keep yielding data as it comes in
+                while (true) {
+                    const message = await getNextMessage();
+                    yield message['text'];
+
+                    // If server sends 'DONE' message or similar, break the loop
+                    if (message === 'DONE') {
+                        break;
+                    }
+                }
+            } finally {
+                eventSource.close();
+            }
+        },
+    };
+}
+
+const JobLogsDialogContent = ({ jobId }: { jobId: string }) => {
+    const question = 'hoi';
+
+    const query = useQuery(
+        queryOptions({
+            queryKey: ['job-logs-sse', jobId],
+
+            queryFn: streamedQuery({
+                queryFn: () => fetchSSE(`/api/jobs/${jobId}/logs`),
+                //queryFn: () => chatAnswer(question),
+            }),
+            staleTime: Infinity,
+        })
+    );
+
+    return (
+        <Flex direction='column' gap='size-25'>
+            {query.data?.map((line, idx) => <Text key={idx}> {line}</Text>)}
+        </Flex>
+    );
+};
+
+const ShowJobLogs = ({ jobId }: { jobId: string }) => {
+    return (
+        <View paddingTop='size-200'>
+            <DialogTrigger type='fullscreenTakeover'>
+                <Button variant='secondary'>Show logs</Button>
+                <Dialog>
+                    <Heading>Logs</Heading>
+                    <Divider />
+                    <Content>
+                        <View
+                            padding='size-200'
+                            backgroundColor={'gray-50'}
+                            UNSAFE_style={{
+                                fontSize: '11px',
+                            }}
+                        >
+                            <Suspense fallback={<Loading mode='inline' />}>
+                                <JobLogsDialogContent jobId={jobId} />
+                            </Suspense>
+                        </View>
+                    </Content>
+                </Dialog>
+            </DialogTrigger>
+        </View>
+    );
+};
 
 const NotEnoughNormalImagesToTrain = ({ mediaItemsCount }: NotEnoughNormalImagesToTrainProps) => {
     const missingNormalImages = REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING - mediaItemsCount;
@@ -48,6 +175,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
                         <ProgressBar aria-label='Training progress' isIndeterminate />
                     </Flex>
                 </Content>
+                {job.id && <ShowJobLogs jobId={job.id} />}
             </InlineAlert>
         );
     }
@@ -64,6 +192,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
                         <ProgressBar value={job.progress} aria-label='Training progress' />
                     </Flex>
                 </Content>
+                {job.id && <ShowJobLogs jobId={job.id} />}
             </InlineAlert>
         );
     }
@@ -77,6 +206,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
                 <Content>
                     <Text>{job.message}</Text>
                 </Content>
+                {job.id && <ShowJobLogs jobId={job.id} />}
             </InlineAlert>
         );
     }
@@ -90,6 +220,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
                 <Content>
                     <Text>{job.message}</Text>
                 </Content>
+                {job.id && <ShowJobLogs jobId={job.id} />}
             </InlineAlert>
         );
     }
@@ -103,6 +234,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
                 <Content>
                     <Text>{job.message}</Text>
                 </Content>
+                {job.id && <ShowJobLogs jobId={job.id} />}
             </InlineAlert>
         );
     }
