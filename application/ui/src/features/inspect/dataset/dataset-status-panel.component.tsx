@@ -4,13 +4,16 @@ import { $api } from '@geti-inspect/api';
 import { SchemaJob as Job } from '@geti-inspect/api/spec';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
 import {
+    ActionButton,
     Button,
+    ButtonGroup,
     Content,
     Dialog,
     DialogTrigger,
     Divider,
     Flex,
     Heading,
+    Icon,
     InlineAlert,
     IntelBrandedLoading,
     Loading,
@@ -18,6 +21,7 @@ import {
     Text,
     View,
 } from '@geti/ui';
+import { LogsIcon } from '@geti/ui/icons';
 import {
     queryOptions,
     experimental_streamedQuery as streamedQuery,
@@ -33,56 +37,50 @@ interface NotEnoughNormalImagesToTrainProps {
     mediaItemsCount: number;
 }
 
-const answers = [
-    "I'm just an example chat, I can't really answer any questions :(".split(' '),
-    'TanStack is great. Would you like to know more?'.split(' '),
-];
-
-function chatAnswer(_question: string) {
-    return {
-        async *[Symbol.asyncIterator]() {
-            const answer = answers[Math.floor(Math.random() * answers.length)];
-            let index = 0;
-            while (index < answer.length) {
-                console.log('iterate?');
-                //await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 300));
-                console.log('answer?', index);
-                yield answer[index++];
-            }
-        },
-    };
-}
-
-// Function to connect to SSE endpoint and yield data
+// Connect to an SSE endpoint and yield its messages
 function fetchSSE(url: string) {
     return {
         async *[Symbol.asyncIterator]() {
-            console.log('OH HI', url);
+            console.log('Start event source', url);
             const eventSource = new EventSource(url);
 
             try {
-                let resolver: ((value: string) => void) | null = null;
-                const getNextMessage = () =>
-                    new Promise<string>((resolve) => {
-                        resolver = resolve;
-                    });
+                let { promise, resolve, reject } = Promise.withResolvers<string>();
 
                 eventSource.onmessage = (event) => {
-                    if (resolver) {
-                        resolver(JSON.parse(event.data));
-                        resolver = null;
+                    console.log(event, event.data);
+                    if (event.data === 'DONE' || event.data.includes('COMPLETED')) {
+                        eventSource.close();
+                        resolve('DONE');
+                        return;
                     }
+                    resolve(event.data);
+                };
+
+                eventSource.onerror = (error) => {
+                    eventSource.close();
+                    reject(new Error('EventSource failed: ' + error));
                 };
 
                 // Keep yielding data as it comes in
                 while (true) {
-                    const message = await getNextMessage();
-                    yield message['text'];
+                    const message = await promise;
 
                     // If server sends 'DONE' message or similar, break the loop
                     if (message === 'DONE') {
                         break;
                     }
+
+                    try {
+                        const data = JSON.parse(message);
+                        if (data['text']) {
+                            yield data['text'];
+                        }
+                    } catch {
+                        console.error('Could not parse message');
+                    }
+
+                    ({ promise, resolve, reject } = Promise.withResolvers<string>());
                 }
             } finally {
                 eventSource.close();
@@ -100,7 +98,6 @@ const JobLogsDialogContent = ({ jobId }: { jobId: string }) => {
 
             queryFn: streamedQuery({
                 queryFn: () => fetchSSE(`/api/jobs/${jobId}/logs`),
-                //queryFn: () => chatAnswer(question),
             }),
             staleTime: Infinity,
         })
@@ -116,25 +113,36 @@ const JobLogsDialogContent = ({ jobId }: { jobId: string }) => {
 const ShowJobLogs = ({ jobId }: { jobId: string }) => {
     return (
         <View paddingTop='size-200'>
-            <DialogTrigger type='fullscreenTakeover'>
-                <Button variant='secondary'>Show logs</Button>
-                <Dialog>
-                    <Heading>Logs</Heading>
-                    <Divider />
-                    <Content>
-                        <View
-                            padding='size-200'
-                            backgroundColor={'gray-50'}
-                            UNSAFE_style={{
-                                fontSize: '11px',
-                            }}
-                        >
-                            <Suspense fallback={<Loading mode='inline' />}>
-                                <JobLogsDialogContent jobId={jobId} />
-                            </Suspense>
-                        </View>
-                    </Content>
-                </Dialog>
+            <DialogTrigger type='fullscreen'>
+                <ActionButton>
+                    <Icon>
+                        <LogsIcon />
+                    </Icon>
+                </ActionButton>
+                {(close) => (
+                    <Dialog>
+                        <Heading>Logs</Heading>
+                        <Divider />
+                        <Content>
+                            <View
+                                padding='size-200'
+                                backgroundColor={'gray-50'}
+                                UNSAFE_style={{
+                                    fontSize: '11px',
+                                }}
+                            >
+                                <Suspense fallback={<Loading mode='inline' />}>
+                                    <JobLogsDialogContent jobId={jobId} />
+                                </Suspense>
+                            </View>
+                        </Content>
+                        <ButtonGroup>
+                            <Button variant='secondary' onPress={close}>
+                                Close
+                            </Button>
+                        </ButtonGroup>
+                    </Dialog>
+                )}
             </DialogTrigger>
         </View>
     );

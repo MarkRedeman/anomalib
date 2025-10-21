@@ -92,6 +92,7 @@ class JobService:
                         continue
                     # No more lines are expected
                     else:
+                        yield "data: DONE\n\n"
                         break
 
                 # Format as an SSE message
