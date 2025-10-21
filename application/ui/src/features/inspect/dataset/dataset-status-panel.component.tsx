@@ -1,12 +1,13 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { ComponentProps, Suspense, useEffect, useRef } from 'react';
 
 import { $api } from '@geti-inspect/api';
-import { SchemaJob as Job } from '@geti-inspect/api/spec';
+import { SchemaJob as Job, SchemaJob, SchemaJobStatus } from '@geti-inspect/api/spec';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
-import { Content, Flex, Heading, InlineAlert, IntelBrandedLoading, ProgressBar, Text } from '@geti/ui';
+import { Content, Flex, Heading, InlineAlert, IntelBrandedLoading, ProgressBar, Text, View } from '@geti/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { differenceBy, isEqual } from 'lodash-es';
 
+import { ShowJobLogs } from '../jobs/show-job-logs.component';
 import { REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING } from './utils';
 
 interface NotEnoughNormalImagesToTrainProps {
@@ -31,83 +32,60 @@ interface TrainingInProgressProps {
     job: Job;
 }
 
+const statusToVariant: Record<SchemaJobStatus, ComponentProps<typeof InlineAlert>['variant']> = {
+    pending: 'info',
+    running: 'info',
+    completed: 'positive',
+    canceled: 'negative',
+    failed: 'negative',
+};
+
+function getHeading(job: SchemaJob) {
+    if (job.status === 'pending') {
+        return `Training will start soon - ${job.payload.model_name}`;
+    }
+    if (job.status === 'running') {
+        return `Training in progress - ${job.payload.model_name}`;
+    }
+
+    if (job.status === 'failed') {
+        return `Training failed - ${job.payload.model_name}`;
+    }
+
+    if (job.status === 'canceled') {
+        return `Training canceled - ${job.payload.model_name}`;
+    }
+
+    if (job.status === 'completed') {
+        return `Training completed - ${job.payload.model_name}`;
+    }
+    return null;
+}
+
 const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
     if (job === undefined) {
         return null;
     }
 
-    if (job.status === 'pending') {
-        const heading = `Training will start soon - ${job.payload.model_name}`;
+    const variant = statusToVariant[job.status];
+    const heading = getHeading(job);
 
-        return (
-            <InlineAlert variant='info'>
-                <Heading>{heading}</Heading>
-                <Content>
-                    <Flex direction={'column'} gap={'size-100'}>
-                        <Text>{job.message}</Text>
-                        <ProgressBar aria-label='Training progress' isIndeterminate />
-                    </Flex>
-                </Content>
-            </InlineAlert>
-        );
-    }
-
-    if (job.status === 'running') {
-        const heading = `Training in progress - ${job.payload.model_name}`;
-
-        return (
-            <InlineAlert variant='info'>
-                <Heading>{heading}</Heading>
-                <Content>
-                    <Flex direction={'column'} gap={'size-100'}>
-                        <Text>{job.message}</Text>
-                        <ProgressBar value={job.progress} aria-label='Training progress' />
-                    </Flex>
-                </Content>
-            </InlineAlert>
-        );
-    }
-
-    if (job.status === 'failed') {
-        const heading = `Training failed - ${job.payload.model_name}`;
-
-        return (
-            <InlineAlert variant='negative'>
-                <Heading>{heading}</Heading>
-                <Content>
+    return (
+        <InlineAlert variant={variant}>
+            <Heading>
+                <Flex gap='size-100' alignItems={'center'} justifyContent={'space-between'}>
+                    {heading}
+                    {job.id && <ShowJobLogs jobId={job.id} />}
+                </Flex>
+            </Heading>
+            <Content>
+                <Flex direction={'column'} gap={'size-100'}>
                     <Text>{job.message}</Text>
-                </Content>
-            </InlineAlert>
-        );
-    }
-
-    if (job.status === 'canceled') {
-        const heading = `Training canceled - ${job.payload.model_name}`;
-
-        return (
-            <InlineAlert variant='negative'>
-                <Heading>{heading}</Heading>
-                <Content>
-                    <Text>{job.message}</Text>
-                </Content>
-            </InlineAlert>
-        );
-    }
-
-    if (job.status === 'completed') {
-        const heading = `Training completed - ${job.payload.model_name}`;
-
-        return (
-            <InlineAlert variant='positive'>
-                <Heading>{heading}</Heading>
-                <Content>
-                    <Text>{job.message}</Text>
-                </Content>
-            </InlineAlert>
-        );
-    }
-
-    return null;
+                    {job.status === 'pending' && <ProgressBar aria-label='Training progress' isIndeterminate />}
+                </Flex>
+            </Content>
+        </InlineAlert>
+    );
 };
 
 const REFETCH_INTERVAL_WITH_TRAINING = 1_000;
