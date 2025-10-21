@@ -3,8 +3,8 @@
 import asyncio
 import base64
 import io
-import logging
 from dataclasses import dataclass
+from functools import lru_cache
 from multiprocessing.synchronize import Event as EventClass
 from uuid import UUID
 
@@ -13,7 +13,7 @@ import numpy as np
 import openvino as ov
 import openvino.properties.hint as ov_hints
 from anomalib.deploy import ExportType, OpenVINOInferencer
-from cachetools.func import lru_cache
+from loguru import logger
 from PIL import Image
 
 from db import get_async_db_session_ctx
@@ -22,8 +22,6 @@ from pydantic_models.model import SupportedDevices
 from repositories import ModelRepository
 from repositories.binary_repo import ModelBinaryRepository
 from services.exceptions import DeviceNotFoundError
-
-logger = logging.getLogger(__name__)
 
 DEFAULT_DEVICE = "AUTO"
 
@@ -61,7 +59,7 @@ class ModelService:
                 self._mp_model_reload_event.set()
         except Exception as e:
             # Best-effort signaling; avoid bubbling up to API layer
-            logger.debug("Failed to signal model reload event: %s", e)
+            logger.debug(f"Failed to signal model reload event: {e}")
 
     @staticmethod
     async def create_model(model: Model) -> Model:
@@ -141,7 +139,7 @@ class ModelService:
             and (device is None or cached_models[model.id].device == device)
         )
 
-        if use_cached:
+        if use_cached and cached_models is not None:
             inference_model = cached_models[model.id]
         else:
             logger.info(f"Loading model with device: {device or DEFAULT_DEVICE}")
@@ -161,12 +159,18 @@ class ModelService:
         # Process image
         npd = np.frombuffer(image_bytes, np.uint8)
         bgr_image = cv2.imdecode(npd, -1)
+        if bgr_image is None:
+            raise ValueError("Failed to decode image")
+
         numpy_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
 
         # Run prediction
         pred = inference_model.predict(numpy_image)
 
         # Process anomaly map
+        if pred.anomaly_map is None:
+            raise ValueError("Prediction returned no anomaly map")
+
         arr = pred.anomaly_map.squeeze()  # Remove dimensions of size 1
         arr_scaled = (arr * 255).astype(np.uint8)  # Scale to 0-255 and convert to uint8
         # convert to color map
@@ -183,6 +187,9 @@ class ModelService:
             im_base64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
         # Create response data
+        if pred.pred_label is None or pred.pred_score is None:
+            raise ValueError("Prediction returned no label or score")
+
         label = PredictionLabel.ANOMALOUS if pred.pred_label.item() else PredictionLabel.NORMAL
         score = float(pred.pred_score.item())
 

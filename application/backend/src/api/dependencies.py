@@ -2,7 +2,7 @@ from functools import lru_cache
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, Request, status, Form
+from fastapi import Depends, Form, HTTPException, Request, status
 
 from core import Scheduler
 from services import (
@@ -46,6 +46,8 @@ async def get_model_service(scheduler: Annotated[Scheduler, Depends(get_schedule
 @lru_cache
 def get_metrics_service(scheduler: Annotated[Scheduler, Depends(get_scheduler)]) -> MetricsService:
     """Provides a MetricsService instance for collecting and retrieving metrics."""
+    if scheduler.shm_metrics is None:
+        raise RuntimeError("Shared memory not initialized")
     return MetricsService(scheduler.shm_metrics.name, scheduler.shm_metrics_lock)
 
 
@@ -103,41 +105,45 @@ def is_valid_uuid(identifier: str) -> bool:
     return True
 
 
-def get_uuid(identifier: str, name: str = "DIO") -> UUID:
+def get_uuid(identifier: str, name: str) -> UUID:
     """Initializes and validates a source ID"""
     if not is_valid_uuid(identifier):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid {name} ID")
     return UUID(identifier)
 
 
-def get_source_id(source_id: str) -> UUID:
+async def get_source_id(source_id: str) -> UUID:
     """Initializes and validates a source ID"""
     if not is_valid_uuid(source_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid source ID")
     return UUID(source_id)
 
 
-def get_sink_id(sink_id: str) -> UUID:
+async def get_sink_id(sink_id: str) -> UUID:
     """Initializes and validates a sink ID"""
     if not is_valid_uuid(sink_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid sink ID")
     return UUID(sink_id)
 
 
-def get_project_id(project_id: str) -> UUID:
+async def get_project_id(project_id: str) -> UUID:
     """Initializes and validates a project ID"""
     return get_uuid(project_id, "project")
 
 
-def get_media_id(media_id: str) -> UUID:
+async def get_media_id(media_id: str) -> UUID:
     """Initializes and validates a media ID"""
     return get_uuid(media_id, "media")
 
 
-def get_model_id(model_id: str) -> UUID:
+async def get_model_id(model_id: str) -> UUID:
     """Initializes and validates a media ID"""
     return get_uuid(model_id, "model")
 
+
+async def get_job_id(job_id: str) -> UUID:
+    """Initializes and validates a job ID"""
+    return get_uuid(job_id, "job")
 
 async def get_webrtc_manager(request: Request) -> WebRTCManager:
     """Provides the global WebRTCManager instance from FastAPI application's state."""
