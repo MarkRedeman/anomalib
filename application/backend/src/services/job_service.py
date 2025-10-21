@@ -93,4 +93,6 @@ class JobService:
                     # No more lines are expected
                     else:
                         break
-                yield line
+
+                # Format as an SSE message
+                yield f"data: {line.rstrip()}\n\n"
