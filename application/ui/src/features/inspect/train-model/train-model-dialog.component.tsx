@@ -4,6 +4,7 @@ import { $api } from '@geti-inspect/api';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
 import { Button, ButtonGroup, Content, Dialog, Divider, Heading, Loading, RadioGroup, View } from '@geti/ui';
 import { useSearchParams } from 'react-router-dom';
+import { toast as sonnerToast } from 'sonner';
 
 import { TrainableModelListBox } from './trainable-model-list-box.component';
 
@@ -27,6 +28,7 @@ export const TrainModelDialog = ({ close }: { close: () => void }) => {
         });
 
         close();
+        sonnerToast.dismiss();
 
         searchParams.set('mode', 'Models');
         setSearchParams(searchParams);
