@@ -3,12 +3,14 @@ import { Suspense, useState } from 'react';
 import { $api } from '@geti-inspect/api';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
 import { Button, ButtonGroup, Content, Dialog, Divider, Heading, Loading, RadioGroup, View } from '@geti/ui';
+import { useSearchParams } from 'react-router-dom';
 
 import { TrainableModelListBox } from './trainable-model-list-box.component';
 
 import classes from './train-model.module.scss';
 
 export const TrainModelDialog = ({ close }: { close: () => void }) => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const { projectId } = useProjectIdentifier();
     const startTrainingMutation = $api.useMutation('post', '/api/jobs:train', {
         meta: {
@@ -25,6 +27,9 @@ export const TrainModelDialog = ({ close }: { close: () => void }) => {
         });
 
         close();
+
+        searchParams.set('mode', 'Models');
+        setSearchParams(searchParams);
     };
     const [selectedModel, setSelectedModel] = useState<string | null>(null);
 

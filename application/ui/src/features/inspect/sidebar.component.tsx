@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { Dataset as DatasetIcon, Models as ModelsIcon, Stats } from '@geti-inspect/icons';
 import { Flex, Grid, ToggleButton, View } from '@geti/ui';
+import { useSearchParams } from 'react-router-dom';
 
 import { Dataset } from './dataset/dataset.component';
 import { Models } from './models/models.component';
@@ -25,7 +26,16 @@ interface TabProps {
 }
 
 const SidebarTabs = ({ tabs, selectedTab }: TabProps) => {
-    const [tab, setTab] = useState<string | null>(selectedTab);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const selectTab = (tab: string | null) => {
+        if (tab === null) {
+            searchParams.delete('mode');
+        } else {
+            searchParams.set('mode', tab);
+        }
+        setSearchParams(searchParams);
+    };
+    const tab = searchParams.get('mode');
 
     const gridTemplateColumns = tab !== null ? ['clamp(size-4600, 35vw, 40rem)', 'size-600'] : ['0px', 'size-600'];
 
@@ -55,7 +65,7 @@ const SidebarTabs = ({ tabs, selectedTab }: TabProps) => {
                             key={label}
                             isQuiet
                             isSelected={label === tab}
-                            onChange={() => setTab(label === tab ? null : label)}
+                            onChange={() => selectTab(label === tab ? null : label)}
                             UNSAFE_className={styles.toggleButton}
                             aria-label={`Toggle ${label} tab`}
                         >
