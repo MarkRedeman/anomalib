@@ -10,6 +10,7 @@ import {
     IllustratedMessage,
     ProgressBar,
     Row,
+    Selection,
     TableBody,
     TableHeader,
     TableView,
@@ -19,6 +20,11 @@ import {
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import Forward from '@spectrum-icons/workflow/Forward';
 import More from '@spectrum-icons/workflow/More';
+import { SchemaJob } from 'src/api/openapi-spec';
+
+import { useInference } from '../inference-provider.component';
+import { ShowJobLogs } from '../jobs/show-job-logs.component';
+import { useJobs, useModels } from './models.component';
 
 interface ModelData {
     id: string;
@@ -27,88 +33,108 @@ interface ModelData {
     status: 'Training' | 'Completed' | 'Failed';
     architecture: string;
     progress: number;
+    job: SchemaJob | undefined;
 }
 
 const ModelsView = () => {
-    const [models, setModels] = useState<ModelData[]>([
-        {
-            id: '1',
-            name: 'Model #1',
+    const jobs = useJobs();
+    const models = useModels().map((model): ModelData => {
+        const job = jobs.find((job) => {
+            return job.payload['model_name'] === model.name;
+        });
+
+        return {
+            id: model.id!,
+            name: model.name!,
+            status: 'Completed',
+            architecture: model.name!,
             timestamp: '01 Oct 2025, 11:07 AM',
-            status: 'Training',
-            architecture: 'PADIM',
-            progress: 15,
-        },
-    ]);
+            progress: 1.0,
+            job,
+        };
+    });
+
+    const nonCompletedJobs = jobs
+        .filter((job) => job.status !== 'completed')
+        .map((job): ModelData => {
+            const name = String(job.payload['model_name']);
+            return {
+                id: job.id!,
+                name,
+                status: job.status === 'pending' ? 'Training' : job.status === 'running' ? 'Training' : 'Failed',
+                architecture: name,
+                timestamp: '01 Oct 2025, 11:07 AM',
+                progress: 1.0,
+                job,
+            };
+        });
+
+    const { selectedModelId, onSetSelectedModelId } = useInference();
 
     return (
-        <View backgroundColor='gray-100' height='100%' padding='size-400'>
-            {/* Header section */}
-            <Flex justifyContent='space-between' alignItems='center' marginBottom='size-300'>
-                <Heading level={1}>Models</Heading>
-                <Button variant='secondary' isQuiet UNSAFE_style={{ borderRadius: '16px' }}>
-                    Train model
-                    <Text>»</Text>
-                </Button>
-            </Flex>
-
-            <View borderTopWidth='thin' borderTopColor='gray-400' paddingTop='size-300'>
-                <Heading level={2} marginBottom='size-200'>
-                    Current training
-                </Heading>
-
+        <View backgroundColor='gray-100' height='100%' padding='size-200'>
+            <View borderTopWidth='thin' borderTopColor='gray-400' backgroundColor={'gray-300'}>
                 {/* Models Table */}
-                <TableView aria-label='Models' overflowMode='wrap' selectionMode='none'>
+                <TableView
+                    aria-label='Models'
+                    overflowMode='wrap'
+                    selectionStyle='highlight'
+                    selectionMode='single'
+                    selectedKeys={selectedModelId === undefined ? new Set() : new Set([selectedModelId])}
+                    onSelectionChange={(key: Selection) => {
+                        if (typeof key === 'string') {
+                            return;
+                        }
+
+                        const selectedModelId = key.values().next().value;
+                        const model = models.find((model) => model.id === selectedModelId);
+
+                        onSetSelectedModelId(model?.id);
+                    }}
+                >
                     <TableHeader>
-                        <Column width='60%' UNSAFE_className='spectrum-Table-headCell'>
-                            MODEL NAME
-                        </Column>
-                        <Column width='40%' UNSAFE_className='spectrum-Table-headCell'>
-                            ARCHITECTURE
-                        </Column>
+                        <Column colspan={2}>MODEL NAME</Column>
+                        <Column> </Column>
                     </TableHeader>
                     <TableBody>
-                        {models.map((model) => (
-                            <Row>
+                        {[...nonCompletedJobs, ...models].map((model) => (
+                            <Row key={model.id}>
                                 <Cell>
                                     <Flex alignItems='center' gap='size-100'>
-                                        <ChevronRight size='S' />
-                                        <View>
-                                            <Text>{model.name}</Text>
-                                            <Text
-                                                UNSAFE_style={{
-                                                    fontSize: '0.9rem',
-                                                    color: 'var(--spectrum-global-color-gray-500)',
-                                                }}
-                                            >
-                                                {model.timestamp}
-                                            </Text>
-                                        </View>
-                                        <View
-                                            padding='size-50'
-                                            paddingX='size-150'
-                                            marginStart='size-100'
+                                        <Text>{model.name}</Text>
+                                        <Text
                                             UNSAFE_style={{
-                                                backgroundColor: 'var(--spectrum-global-color-blue-400)',
-                                                borderRadius: '16px',
-                                                fontSize: '0.75rem',
+                                                fontSize: '0.9rem',
+                                                color: 'var(--spectrum-global-color-gray-500)',
                                             }}
                                         >
-                                            <Text>{model.status}</Text>
-                                        </View>
+                                            {model.timestamp}
+                                        </Text>
                                     </Flex>
                                 </Cell>
                                 <Cell>
-                                    <Flex justifyContent='space-between' alignItems='center'>
-                                        <Text>{model.architecture}</Text>
+                                    <Flex justifyContent='end' alignItems='center'>
                                         <Flex alignItems='center' gap='size-200'>
-                                            <Flex alignItems='center' gap='size-50'>
-                                                <Forward size='S' />
-                                                <Text>Speed</Text>
-                                            </Flex>
-                                            <ActionButton isQuiet>
-                                                <More />
-                                            </ActionButton>
+                                            {selectedModelId === model.id && (
+                                                <View
+                                                    padding='size-50'
+                                                    paddingX='size-150'
+                                                    marginStart='size-100'
+                                                    UNSAFE_style={{
+                                                        backgroundColor: 'var(--spectrum-global-color-blue-400)',
+                                                        borderRadius: '16px',
+                                                        fontSize: '0.75rem',
+                                                    }}
+                                                >
+                                                    <Text>Active</Text>
+                                                </View>
+                                            )}
+                                            {model.job?.id && <ShowJobLogs jobId={model.job.id} />}
+                                            {false && (
+                                                <ActionButton isQuiet>
+                                                    <More />
+                                                </ActionButton>
+                                            )}
                                         </Flex>
                                     </Flex>
                                 </Cell>

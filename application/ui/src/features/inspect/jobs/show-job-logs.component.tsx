@@ -52,6 +52,7 @@ function fetchSSE(url: string) {
 
                     try {
                         const data = JSON.parse(message);
+                        console.log(data);
                         if (data['text']) {
                             yield data['text'];
                         }

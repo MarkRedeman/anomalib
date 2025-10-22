@@ -25,16 +25,29 @@ const useMediaItems = () => {
     };
 };
 
-const ModelsContent = () => {
+export const useJobs = () => {
     const { projectId } = useProjectIdentifier();
-
     const jobsQuery = $api.useSuspenseQuery('get', '/api/jobs');
     const jobs = jobsQuery.data.jobs.filter((job) => job.project_id === projectId);
 
+    return jobs;
+};
+
+export const useModels = () => {
+    const { projectId } = useProjectIdentifier();
     const modelsQuery = $api.useSuspenseQuery('get', '/api/projects/{project_id}/models', {
         params: { path: { project_id: projectId } },
     });
     const models = modelsQuery.data.models;
+
+    return models;
+};
+
+const ModelsContent = () => {
+    const { projectId } = useProjectIdentifier();
+
+    const jobs = useJobs();
+    const models = useModels();
 
     return (
         <>
@@ -91,11 +104,9 @@ export const Models = () => {
                 </Flex>
             </Heading>
             <Suspense fallback={<Loading mode={'inline'} />}>
-                <View flex={1} padding={'size-300'}>
+                <View flex={1} padding={'size-50'}>
                     <Flex direction={'column'} height={'100%'} gap={'size-300'}>
                         <ModelsView />
-                        <DatasetModelsView />
-                        <ModelsContent />
                     </Flex>
                 </View>
             </Suspense>
