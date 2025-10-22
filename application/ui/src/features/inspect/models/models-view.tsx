@@ -130,6 +130,7 @@ const ModelsView = () => {
                                                 </View>
                                             )}
                                             {model.job?.id && <ShowJobLogs jobId={model.job.id} />}
+                                            {model.job && model.job.status}
                                             {false && (
                                                 <ActionButton isQuiet>
                                                     <More />
@@ -143,7 +144,7 @@ const ModelsView = () => {
                     </TableBody>
                 </TableView>
 
-                {models.length === 0 && (
+                {jobs.length === 0 && models.length === 0 && (
                     <IllustratedMessage>
                         <Heading>No models in training</Heading>
                         <Text>Start a new training to see models here.</Text>

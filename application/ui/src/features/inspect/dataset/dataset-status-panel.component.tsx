@@ -90,7 +90,7 @@ const TrainingInProgress = ({ job }: TrainingInProgressProps) => {
 
 const REFETCH_INTERVAL_WITH_TRAINING = 1_000;
 
-const useProjectTrainingJobs = () => {
+export const useProjectTrainingJobs = () => {
     const { projectId } = useProjectIdentifier();
 
     const { data } = $api.useQuery('get', '/api/jobs', undefined, {
@@ -107,7 +107,7 @@ const useProjectTrainingJobs = () => {
     return { jobs: data?.jobs.filter((job) => job.project_id === projectId) };
 };
 
-const useRefreshModelsOnJobUpdates = (jobs: Job[] | undefined) => {
+export const useRefreshModelsOnJobUpdates = (jobs: Job[] | undefined) => {
     const queryClient = useQueryClient();
     const { projectId } = useProjectIdentifier();
     const prevJobsRef = useRef<Job[]>([]);

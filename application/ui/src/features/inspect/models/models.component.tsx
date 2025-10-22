@@ -4,6 +4,7 @@ import { $api } from '@geti-inspect/api';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
 import { Button, Divider, FileTrigger, Flex, Grid, Heading, Loading, toast, View } from '@geti/ui';
 
+import { useProjectTrainingJobs, useRefreshModelsOnJobUpdates } from '../dataset/dataset-status-panel.component';
 import { REQUIRED_NUMBER_OF_NORMAL_IMAGES_TO_TRIGGER_TRAINING } from '../dataset/utils';
 import { TrainModelButton } from '../train-model/train-model-button.component';
 import { DatasetModelsView } from './copilot';
@@ -26,11 +27,13 @@ const useMediaItems = () => {
 };
 
 export const useJobs = () => {
-    const { projectId } = useProjectIdentifier();
-    const jobsQuery = $api.useSuspenseQuery('get', '/api/jobs');
-    const jobs = jobsQuery.data.jobs.filter((job) => job.project_id === projectId);
+    const { jobs } = useProjectTrainingJobs();
 
-    return jobs;
+    //const { projectId } = useProjectIdentifier();
+    //const jobsQuery = $api.useSuspenseQuery('get', '/api/jobs');
+    //const jobs = jobsQuery.data.jobs.filter((job) => job.project_id === projectId);
+
+    return jobs ?? [];
 };
 
 export const useModels = () => {
@@ -48,6 +51,7 @@ const ModelsContent = () => {
 
     const jobs = useJobs();
     const models = useModels();
+    useRefreshModelsOnJobUpdates(jobs);
 
     return (
         <>
