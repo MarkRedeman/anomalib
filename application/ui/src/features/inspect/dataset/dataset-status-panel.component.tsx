@@ -118,8 +118,10 @@ export const useRefreshModelsOnJobUpdates = (jobs: Job[] | undefined) => {
         }
 
         if (!isEqual(prevJobsRef.current, jobs)) {
-            const differenceInJobsBasedOnStatus = differenceBy(prevJobsRef.current, jobs, (job) => job.status);
-            const shouldRefetchModels = differenceInJobsBasedOnStatus.some((job) => job.status === 'completed');
+            const shouldRefetchModels = jobs.some((job, idx) => {
+                // NOTE: assuming index stays the same
+                return job.status === 'completed' && job.status !== prevJobsRef.current.at(idx)?.status;
+            });
 
             if (shouldRefetchModels) {
                 queryClient.invalidateQueries({

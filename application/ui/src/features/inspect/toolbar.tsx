@@ -121,8 +121,28 @@ const ModelsPicker = () => {
     );
 };
 
+const DevicePicker = () => {
+    const { selectedDevice, setSelectedDevice } = useInference();
+
+    return (
+        <Picker
+            label='Select inference device'
+            labelPosition='side'
+            items={['cpu', 'gpu', 'npu', 'auto']}
+            selectedKey={selectedDevice}
+            onSelectionChange={(key) => setSelectedDevice(key as 'cpu' | 'gpu' | 'npu' | 'auto')}
+        >
+            <Item key='auto'>Auto</Item>
+            <Item key='cpu'>CPU</Item>
+            <Item key='gpu'>GPU</Item>
+            <Item key='npu'>NPU</Item>
+        </Picker>
+    );
+};
+
 const InferenceOpacity = () => {
-    const { inferenceOpacity, onInferenceOpacityChange, inferenceResult } = useInference();
+    const { inferenceOpacity, onInferenceOpacityChange, inferenceResult, selectedDevice, setSelectedDevice } =
+        useInference();
 
     return (
         <Flex alignItems={'center'} gap={'size-50'}>
@@ -167,7 +187,7 @@ export const Toolbar = () => {
                 <Divider orientation='vertical' size='S' />
 
                 <Flex marginStart='auto' alignItems={'center'} gap={'size-200'}>
-                    <ModelsPicker />
+                    <DevicePicker />
                     <Divider size={'S'} orientation={'vertical'} />
                     <InferenceOpacity />
                 </Flex>
