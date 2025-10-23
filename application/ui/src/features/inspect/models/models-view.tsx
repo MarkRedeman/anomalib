@@ -20,8 +20,10 @@ import {
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import Forward from '@spectrum-icons/workflow/Forward';
 import More from '@spectrum-icons/workflow/More';
+import { useDateFormatter } from 'react-aria';
 import { SchemaJob } from 'src/api/openapi-spec';
 
+import { useRefreshModelsOnJobUpdates } from '../dataset/dataset-status-panel.component';
 import { useInference } from '../inference-provider.component';
 import { ShowJobLogs } from '../jobs/show-job-logs.component';
 import { useJobs, useModels } from './models.component';
@@ -30,25 +32,45 @@ interface ModelData {
     id: string;
     name: string;
     timestamp: string;
+    duration: number; // seconds
     status: 'Training' | 'Completed' | 'Failed';
     architecture: string;
     progress: number;
     job: SchemaJob | undefined;
 }
 
-const ModelsView = () => {
+export const ModelsView = () => {
+    const dateFormatter = useDateFormatter({ dateStyle: 'medium', timeStyle: 'short' });
+    //const formattedStart = dateFormatter.format(start);
+    //const formattedEnd = dateFormatter.format(end);
+
     const jobs = useJobs();
+    useRefreshModelsOnJobUpdates(jobs);
+
     const models = useModels().map((model): ModelData => {
         const job = jobs.find((job) => {
-            return job.payload['model_name'] === model.name;
+            return job.id === model.train_job_id;
         });
+
+        let timestamp = '';
+        let duration = 0;
+        if (job) {
+            const start = new Date(job.start_time!);
+            const end = new Date(job.end_time!);
+            const diffMs = end.getTime() - start.getTime(); // milliseconds
+            const diffSec = Math.floor(diffMs / 1000);
+            duration = diffSec;
+
+            timestamp = dateFormatter.format(start);
+        }
 
         return {
             id: model.id!,
             name: model.name!,
             status: 'Completed',
             architecture: model.name!,
-            timestamp: '01 Oct 2025, 11:07 AM',
+            timestamp,
+            duration,
             progress: 1.0,
             job,
         };
@@ -65,6 +87,7 @@ const ModelsView = () => {
                 architecture: name,
                 timestamp: '01 Oct 2025, 11:07 AM',
                 progress: 1.0,
+                duration: Infinity,
                 job,
             };
         });
@@ -100,7 +123,7 @@ const ModelsView = () => {
                         {[...nonCompletedJobs, ...models].map((model) => (
                             <Row key={model.id}>
                                 <Cell>
-                                    <Flex alignItems='center' gap='size-100'>
+                                    <Flex alignItems='start' gap='size-25' direction='column'>
                                         <Text>{model.name}</Text>
                                         <Text
                                             UNSAFE_style={{
@@ -115,6 +138,7 @@ const ModelsView = () => {
                                 <Cell>
                                     <Flex justifyContent='end' alignItems='center'>
                                         <Flex alignItems='center' gap='size-200'>
+                                            {model.job && model.job.status}
                                             {selectedModelId === model.id && (
                                                 <View
                                                     padding='size-50'
@@ -130,12 +154,6 @@ const ModelsView = () => {
                                                 </View>
                                             )}
                                             {model.job?.id && <ShowJobLogs jobId={model.job.id} />}
-                                            {model.job && model.job.status}
-                                            {false && (
-                                                <ActionButton isQuiet>
-                                                    <More />
-                                                </ActionButton>
-                                            )}
                                         </Flex>
                                     </Flex>
                                 </Cell>
@@ -166,12 +184,12 @@ const ModelRow = ({ model }: ModelRowProps) => {
                 <Cell>
                     <Flex alignItems='center' gap='size-100'>
                         <ChevronRight size='S' />
-                        <View>
+                        <Flex direction={'column'} gap='size-50'>
                             <Text>{model.name}</Text>
                             <Text UNSAFE_style={{ fontSize: '0.9rem', color: 'var(--spectrum-global-color-gray-500)' }}>
                                 {model.timestamp}
                             </Text>
-                        </View>
+                        </Flex>
                         <View
                             padding='size-50'
                             paddingX='size-150'
@@ -217,8 +235,6 @@ const ModelRow = ({ model }: ModelRowProps) => {
         </View>
     );
 };
-
-export default ModelsView;
 
 const Progressssss = ({ model }) => {
     return (

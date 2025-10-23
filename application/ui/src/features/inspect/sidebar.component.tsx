@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
-
 import { Dataset as DatasetIcon, Models as ModelsIcon, Stats } from '@geti-inspect/icons';
 import { Flex, Grid, ToggleButton, View } from '@geti/ui';
 import { useSearchParams } from 'react-router-dom';
@@ -37,7 +35,8 @@ const SidebarTabs = ({ tabs, selectedTab }: TabProps) => {
     };
     const tab = searchParams.get('mode');
 
-    const gridTemplateColumns = tab !== null ? ['clamp(size-4600, 35vw, 40rem)', 'size-600'] : ['0px', 'size-600'];
+    //const gridTemplateColumns = tab !== null ? ['clamp(size-4600, 35vw, 40rem)', 'size-600'] : ['0px', 'size-600'];
+    const gridTemplateColumns = tab !== null ? ['clamp(size-4600, 55vw, 80rem)', 'size-600'] : ['0px', 'size-600'];
 
     const content = tabs.find(({ label }) => label === tab)?.content;
 
