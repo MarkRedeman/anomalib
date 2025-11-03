@@ -4,7 +4,7 @@
 import { Suspense } from 'react';
 
 import { $api } from '@geti-inspect/api';
-import { SchemaJob as Job, SchemaJobStage } from '@geti-inspect/api/spec';
+import { SchemaJob as Job, SchemaJob, SchemaJobStage } from '@geti-inspect/api/spec';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
 import { Flex, ProgressBar, Text, View } from '@geti/ui';
 import { CanceledIcon, WaitingIcon } from '@geti/ui/icons';
@@ -55,15 +55,45 @@ const getStyleForStage = (stage: SchemaJobStage) => {
     };
 };
 
-const TrainingStatusItem = ({
-    progress,
-    stage,
-    onCancel,
-}: {
-    progress: number;
-    stage: SchemaJobStage;
-    onCancel?: () => void;
-}) => {
+const TrainingStatusItem = ({ trainingJob }: { trainingJob: SchemaJob }) => {
+    // Cancel training job
+    const cancelJobMutation = $api.useMutation('post', '/api/jobs/{job_id}:cancel');
+    const handleCancel = async () => {
+        try {
+            if (trainingJob.id === undefined) {
+                throw Error('TODO: jobs should always have an ID');
+            }
+
+            console.info('Cancel training');
+            await cancelJobMutation.mutateAsync({
+                params: {
+                    path: {
+                        job_id: trainingJob.id,
+                    },
+                },
+            });
+            console.info('Job cancelled successfully');
+        } catch (error) {
+            console.error('Failed to cancel job:', error);
+        }
+    };
+
+    const progressQuery = useQuery(
+        queryOptions({
+            queryKey: ['get', '/api/jobs/{job_id}/progress', trainingJob.id],
+            queryFn: streamedQuery({
+                queryFn: () => fetchSSE(`/api/jobs/${trainingJob.id}/progress`),
+                maxChunks: 1,
+            }),
+            staleTime: Infinity,
+        })
+    );
+
+    // Get the job progress and stage from the last SSE message, or fallback
+    const lastJobProgress = progressQuery.data?.at(-1);
+    const progress = lastJobProgress?.progress ?? trainingJob.progress;
+    const stage = lastJobProgress?.stage ?? trainingJob.stage;
+
     const { backgroundColor, color } = getStyleForStage(stage);
 
     return (
@@ -80,10 +110,7 @@ const TrainingStatusItem = ({
             <Flex direction='row' alignItems='center' width='100px' justifyContent='space-between'>
                 <button
                     onClick={() => {
-                        console.info('Cancel training');
-                        if (onCancel) {
-                            onCancel();
-                        }
+                        handleCancel();
                     }}
                     style={{
                         background: 'none',
@@ -120,66 +147,14 @@ const useCurrentJob = () => {
         (job: Job) => job.project_id === projectId && (job.status === 'running' || job.status === 'pending')
     );
 
-    if (runningJob === undefined) {
-        return {
-            currentJobId: null,
-            status: null,
-            stage: null,
-            progress: null,
-        };
-    }
-
-    return {
-        currentJobId: runningJob.id,
-        status: runningJob.status,
-        stage: runningJob.stage,
-        progress: runningJob.progress,
-    };
+    return runningJob;
 };
 
 export const ProgressBarItem = () => {
-    const { currentJobId, progress: jobProgress, stage: jobStage, status: jobStatus } = useCurrentJob();
+    const trainingJob = useCurrentJob();
 
-    const query = useQuery(
-        queryOptions({
-            queryKey: ['get', '/api/jobs/{job_id}/progress', currentJobId],
-            queryFn: streamedQuery({
-                queryFn: () => fetchSSE(`/api/jobs/${currentJobId}/progress`),
-                maxChunks: 1,
-            }),
-            staleTime: Infinity,
-            enabled: currentJobId !== null,
-        })
-    );
-
-    // Get the job progress and stage from the last SSE message, or fallback
-    const lastJobProgress = query.data?.at(-1);
-    const progress = lastJobProgress?.progress ?? jobProgress ?? null;
-    const stage = lastJobProgress?.stage ?? jobStage ?? null;
-
-    //
-    const cancelJobMutation = $api.useMutation('post', '/api/jobs/{job_id}:cancel');
-    const handleCancel = async () => {
-        if (!currentJobId) {
-            return;
-        }
-
-        try {
-            await cancelJobMutation.mutateAsync({
-                params: {
-                    path: {
-                        job_id: currentJobId,
-                    },
-                },
-            });
-            console.info('Job cancelled successfully');
-        } catch (error) {
-            console.error('Failed to cancel job:', error);
-        }
-    };
-
-    if (jobStatus === 'running') {
-        return <TrainingStatusItem progress={progress ?? 0} stage={stage ?? ''} onCancel={handleCancel} />;
+    if (trainingJob !== undefined) {
+        return <TrainingStatusItem trainingJob={trainingJob} />;
     }
 
     return <IdleItem />;
