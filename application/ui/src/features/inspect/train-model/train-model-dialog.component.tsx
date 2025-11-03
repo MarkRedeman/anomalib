@@ -24,6 +24,7 @@ export const TrainModelDialog = ({ close }: { close: () => void }) => {
         }
 
         await startTrainingMutation.mutateAsync({
+            // TODO: add training device
             body: { project_id: projectId, model_name: selectedModel },
         });
 
