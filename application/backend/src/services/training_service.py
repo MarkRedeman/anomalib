@@ -59,7 +59,9 @@ class TrainingService:
     @classmethod
     async def _run_training_job(cls, job: Job, job_service: JobService) -> Model:
         # Mark job as running
-        await job_service.update_job_status(job_id=job.id, status=JobStatus.RUNNING, message="Training started")
+        await job_service.update_job_status(
+            job_id=job.id, status=JobStatus.RUNNING, message="Training started"
+        )
         project_id = job.project_id
         model_name = job.payload.get("model_name")
         device = job.payload.get("device")
@@ -78,7 +80,9 @@ class TrainingService:
         try:
             synchronization_task = asyncio.create_task(
                 cls._sync_progress_with_db(
-                    job_service=job_service, job_id=job.id, synchronization_parameters=synchronization_parameters
+                    job_service=job_service,
+                    job_id=job.id,
+                    synchronization_parameters=synchronization_parameters,
                 )
             )
             # Use asyncio.to_thread to keep event loop responsive
@@ -93,29 +97,37 @@ class TrainingService:
                 raise ValueError("Training failed - model is None")
 
             await job_service.update_job_status(
-                job_id=job.id, status=JobStatus.COMPLETED, message="Training completed successfully"
+                job_id=job.id,
+                status=JobStatus.COMPLETED,
+                message="Training completed successfully",
             )
-            logger.debug("Syncing progress with db stopped")
-            synchronization_task.cancel()
             return await model_service.create_model(trained_model)
         except Exception as e:
             logger.exception("Failed to train pending training job: %s", e)
             await job_service.update_job_status(
-                job_id=job.id, status=JobStatus.FAILED, message=f"Failed with exception: {str(e)}"
+                job_id=job.id,
+                status=JobStatus.FAILED,
+                message=f"Failed with exception: {str(e)}",
             )
+            if model.export_path:
+                logger.warning(f"Deleting partially created model with id: {model.id}")
+                model_binary_repo = ModelBinaryRepository(
+                    project_id=project_id, model_id=model.id
+                )
+                await model_binary_repo.delete_model_folder()
+                await model_service.delete_model(
+                    project_id=project_id, model_id=model.id
+                )
+            raise e
         finally:
             logger.debug("Syncing progress with db stopped")
             synchronization_task.cancel()
-            if model.export_path:
-                logger.warning(f"Deleting partially created model with id: {model.id}")
-                model_binary_repo = ModelBinaryRepository(project_id=project_id, model_id=model.id)
-                await model_binary_repo.delete_model_folder()
-                await model_service.delete_model(project_id=project_id, model_id=model.id)
-            raise e
 
     @staticmethod
     def _train_model(
-        model: Model, synchronization_parameters: ProgressSyncParams, device: str | None = None
+        model: Model,
+        synchronization_parameters: ProgressSyncParams,
+        device: str | None = None,
     ) -> Model | None:
         """
         Execute CPU-intensive model training using anomalib.
@@ -144,7 +156,9 @@ class TrainingService:
 
         logger.info(f"Training on device: {device}")
 
-        model_binary_repo = ModelBinaryRepository(project_id=model.project_id, model_id=model.id)
+        model_binary_repo = ModelBinaryRepository(
+            project_id=model.project_id, model_id=model.id
+        )
         image_binary_repo = ImageBinaryRepository(project_id=model.project_id)
         image_folder_path = image_binary_repo.project_folder_path
         model.export_path = model_binary_repo.model_folder_path
@@ -156,13 +170,17 @@ class TrainingService:
             normal_dir=image_folder_path,
             test_split_mode=TestSplitMode.SYNTHETIC,
         )
-        logger.info(f"Training from image folder: {image_folder_path} to model folder: {model.export_path}")
+        logger.info(
+            f"Training from image folder: {image_folder_path} to model folder: {model.export_path}"
+        )
 
         # Initialize anomalib model and engine
         anomalib_model = get_model(model=model.name)
 
         trackio = TrackioLogger(project=str(model.project_id), name=model.name)
-        tensorboard = AnomalibTensorBoardLogger(save_dir=global_log_config.tensorboard_log_path, name=name)
+        tensorboard = AnomalibTensorBoardLogger(
+            save_dir=global_log_config.tensorboard_log_path, name=name
+        )
         engine = Engine(
             default_root_dir=model.export_path,
             logger=[trackio, tensorboard],
@@ -212,7 +230,10 @@ class TrainingService:
                     break
                 logger.debug(f"Syncing progress with db: {progress}% - {stage}")
                 await job_service.update_job_status(
-                    job_id=job_id, status=JobStatus.RUNNING, progress=progress, stage=stage
+                    job_id=job_id,
+                    status=JobStatus.RUNNING,
+                    progress=progress,
+                    stage=stage,
                 )
                 await asyncio.sleep(0.5)
         except Exception as e:
