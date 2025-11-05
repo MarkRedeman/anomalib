@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 import { $api } from '@geti-inspect/api';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
-import { Button, Divider, Flex, Item, Picker, StatusLight, View } from '@geti/ui';
+import { Button, Divider, Flex, Item, Picker, StatusLight, Switch, View } from '@geti/ui';
 
 import { useWebRTCConnection } from '../../../components/stream/web-rtc-connection-provider';
 import { useInference } from '../inference-provider.component';
@@ -110,6 +110,40 @@ const ModelsPicker = () => {
     );
 };
 
+const PipelineSwitch = () => {
+    const { projectId: project_id } = useProjectIdentifier();
+    const pipeline = $api.useSuspenseQuery('get', '/api/projects/{project_id}/pipeline', {
+        params: { path: { project_id } },
+    });
+    const enableMutation = $api.useMutation('post', '/api/projects/{project_id}/pipeline:enable', {
+        meta: {
+            invalidates: [['get', '/api/projects/{project_id}/pipeline', { params: { path: { project_id } } }]],
+        },
+    });
+    const disableMutation = $api.useMutation('post', '/api/projects/{project_id}/pipeline:disable', {
+        meta: {
+            invalidates: [['get', '/api/projects/{project_id}/pipeline', { params: { path: { project_id } } }]],
+        },
+    });
+
+    console.log(pipeline.data.status);
+
+    return (
+        <Switch
+            isSelected={pipeline.data.status === 'running'}
+            onChange={(isSelected) => {
+                if (isSelected) {
+                    enableMutation.mutate({ params: { path: { project_id } } });
+                } else {
+                    disableMutation.mutate({ params: { path: { project_id } } });
+                }
+            }}
+        >
+            Enabled
+        </Switch>
+    );
+};
+
 export const Toolbar = () => {
     return (
         <View
@@ -130,6 +164,8 @@ export const Toolbar = () => {
                     <ModelsPicker />
                     <Divider size={'S'} orientation={'vertical'} />
                     <InferenceOpacity />
+                    <Divider size={'S'} orientation={'vertical'} />
+                    <PipelineSwitch />
                     <Divider size={'S'} orientation={'vertical'} />
                     <InputOutputSetup />
                 </Flex>

@@ -4,6 +4,7 @@ import { Badge } from '@adobe/react-spectrum';
 import { $api } from '@geti-inspect/api';
 import { useProjectIdentifier } from '@geti-inspect/hooks';
 import {
+    Button,
     Cell,
     Column,
     Flex,
@@ -108,6 +109,9 @@ export const ModelsView = () => {
 
     const { selectedModelId, onSetSelectedModelId } = useInference();
 
+    const updatePipeline = $api.useMutation('patch', '/api/projects/{project_id}/pipeline');
+    const { projectId } = useProjectIdentifier();
+
     return (
         <View backgroundColor='gray-100' height='100%' padding='size-200'>
             <View borderTopWidth='thin' borderTopColor='gray-400' backgroundColor={'gray-300'}>
@@ -127,6 +131,16 @@ export const ModelsView = () => {
                         const selectedModel = models.find((model) => model.id === selectedId);
 
                         onSetSelectedModelId(selectedModel?.id);
+                        if (selectedModel) {
+                            updatePipeline.mutate({
+                                params: {
+                                    path: { project_id: projectId },
+                                },
+                                body: {
+                                    model_id: selectedModel.id,
+                                },
+                            });
+                        }
                     }}
                 >
                     <TableHeader>
