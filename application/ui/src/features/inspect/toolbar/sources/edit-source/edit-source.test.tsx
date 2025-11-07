@@ -38,6 +38,7 @@ describe('EditIpCamera', () => {
                     onBackToList={vi.fn()}
                     componentFields={(state: IPCameraSourceConfig) => <IpCameraFields defaultState={state} />}
                     bodyFormatter={ipCameraBodyFormatter}
+                    onBackToList={vi.fn()}
                 />
             </TestProviders>
         );
