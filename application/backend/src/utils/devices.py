@@ -16,6 +16,7 @@ class Devices:
         devices = []
         for device_name, device_info in AcceleratorRegistry.items():
             accelerator = device_info["accelerator"]
+            print(device_name, device_info, accelerator.is_available())
             if accelerator.is_available():
                 devices.append(device_name.casefold())
         return devices
