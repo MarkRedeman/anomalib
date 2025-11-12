@@ -8,6 +8,11 @@ export const InferenceDevices = () => {
     const { data } = $api.useSuspenseQuery('get', '/api/inference-devices');
     const { projectId } = useProjectIdentifier();
     const updatePipeline = $api.useMutation('patch', '/api/projects/{project_id}/pipeline', {
+        meta: {
+            invalidates: [
+                ['get', '/api/projects/{project_id}/pipeline', { params: { path: { project_id: projectId } } }],
+            ],
+        },
         onError: (error) => {
             if (error) {
                 toast({ type: 'error', message: String(error.detail) });
@@ -32,11 +37,11 @@ export const InferenceDevices = () => {
 
     return (
         <Picker
-            width='100%'
             items={options}
             label='Inference devices'
+            labelPosition='side'
             onSelectionChange={handleChange}
-            defaultSelectedKey={defaultSelectedKey}
+            selectedKey={defaultSelectedKey}
         >
             {(item) => <Item>{item.name}</Item>}
         </Picker>
