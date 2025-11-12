@@ -50,7 +50,7 @@ async def get_job_progress(
     job_service: Annotated[JobService, Depends(get_job_service)],
 ) -> EventSourceResponse:
     """Endpoint to get the progress of a job by its ID"""
-    return EventSourceResponse(job_service.stream_progress(job_id=job_id))
+    return None
 
 
 @job_router.post("/{job_id}:cancel", status_code=status.HTTP_202_ACCEPTED)
