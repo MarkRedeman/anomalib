@@ -74,7 +74,7 @@ class MqttDispatcher(BaseDispatcher):
         for attempt in range(MAX_RETRIES):
             try:
                 logger.info(
-                    "Connecting to MQTT broker at %s:%s (attempt %s)", self.broker_host, self.broker_port, attempt + 1
+                    "Connecting to MQTT broker at {}:{} (attempt {})", self.broker_host, self.broker_port, attempt + 1
                 )
                 self.client.connect(self.broker_host, self.broker_port)
                 self.client.loop_start()
@@ -82,7 +82,7 @@ class MqttDispatcher(BaseDispatcher):
                     return
                 logger.warning(f"Connection timeout after {CONNECT_TIMEOUT} seconds")
             except Exception as e:
-                logger.error("Connection failed %s", e)
+                logger.error("Connection failed {}", e)
                 time.sleep(RETRY_DELAY * (attempt + 1))
         raise ConnectionError("Failed to connect to MQTT broker")
 

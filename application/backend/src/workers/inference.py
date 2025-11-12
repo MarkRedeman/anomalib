@@ -90,7 +90,7 @@ class InferenceWorker(BaseProcessWorker):
                         self._cached_models.pop(self._loaded_model.id, None)
                     except Exception as e:
                         logger.debug(
-                            "Failed to evict cached model %s: %s",
+                            "Failed to evict cached model {}: {}",
                             getattr(self._loaded_model, "id", "unknown"),
                             e,
                         )
@@ -101,7 +101,7 @@ class InferenceWorker(BaseProcessWorker):
                         )
                         self._cached_models[self._loaded_model.id] = inferencer
                         logger.info(
-                            "Reloaded inference model '%s' (%s) on device %s",
+                            "Reloaded inference model '{}' ({}) on device {}",
                             self._loaded_model.name,
                             self._loaded_model.id,
                             self._loaded_model.device,
@@ -109,7 +109,7 @@ class InferenceWorker(BaseProcessWorker):
                     except DeviceNotFoundError:
                         # Load model using the default device
                         logger.warning(
-                            "Device '%s' not found; loading model '%s' (%s) on default device",
+                            "Device '{}' not found; loading model '{}' ({}) on default device",
                             self._loaded_model.device,
                             self._loaded_model.name,
                             self._loaded_model.id,

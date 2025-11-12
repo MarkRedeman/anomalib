@@ -98,7 +98,7 @@ class TrainingService:
             )
             return await model_service.create_model(trained_model)
         except Exception as e:
-            logger.error("Failed to train pending training job: %s", e)
+            logger.error("Failed to train pending training job: {}", e)
             await job_service.update_job_status(
                 job_id=job.id, status=JobStatus.FAILED, message=f"Failed with exception: {str(e)}"
             )
@@ -218,7 +218,7 @@ class TrainingService:
                 )
                 await asyncio.sleep(0.5)
         except Exception as e:
-            logger.exception("Failed to sync progress with db: %s", e)
+            logger.exception("Failed to sync progress with db: {}", e)
             await job_service.update_job_status(job_id=job_id, status=JobStatus.FAILED, message="Training failed")
             raise
 
