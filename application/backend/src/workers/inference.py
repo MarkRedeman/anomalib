@@ -133,7 +133,7 @@ class InferenceWorker(BaseProcessWorker):
                 continue
 
             # Refresh loaded model reference if changed
-            if self._loaded_model is None or self._loaded_model.id != active_model.id:
+            if self._loaded_model is None or self._loaded_model.id != active_model.id or self._loaded_model.device != active_model.device:
                 self._loaded_model = active_model
                 logger.info(f"Using model '{self._loaded_model.name}' ({self._loaded_model.id}) for inference")
 
