@@ -81,7 +81,7 @@ export const ModelsView = () => {
         .filter((model): model is ModelData => model !== null);
 
     const nonCompletedJobs = jobs
-        .filter((job) => job.status !== 'completed')
+        .filter((job) => job.status !== 'completed' && job.progress < 100)
         .map((job): ModelData => {
             const name = String(job.payload['model_name']);
 
