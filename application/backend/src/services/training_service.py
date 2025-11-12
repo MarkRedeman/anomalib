@@ -7,7 +7,7 @@ from uuid import UUID
 from anomalib.data import Folder
 from anomalib.data.utils import TestSplitMode
 from anomalib.deploy import ExportType
-from anomalib.engine import Engine
+from anomalib.engine import Engine, SingleXPUStrategy, XPUAccelerator
 from anomalib.loggers import AnomalibTensorBoardLogger
 from anomalib.models import get_model
 from loguru import logger
@@ -163,6 +163,7 @@ class TrainingService:
 
         trackio = TrackioLogger(project=str(model.project_id), name=model.name)
         tensorboard = AnomalibTensorBoardLogger(save_dir=global_log_config.tensorboard_log_path, name=name)
+
         engine = Engine(
             default_root_dir=model.export_path,
             logger=[trackio, tensorboard],
@@ -170,6 +171,7 @@ class TrainingService:
             max_epochs=10,
             callbacks=[GetiInspectProgressCallback(synchronization_parameters)],
             accelerator=training_device,
+            **({"strategy": SingleXPUStrategy()} if training_device == "xpu" else {}),
         )
 
         # Execute training and export
