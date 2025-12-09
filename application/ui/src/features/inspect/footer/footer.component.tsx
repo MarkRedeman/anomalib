@@ -166,9 +166,7 @@ export const ProgressBarItem = () => {
 export const Footer = () => {
     return (
         <View gridArea={'footer'} backgroundColor={'gray-100'} width={'100%'} height={'size-400'} overflow={'hidden'}>
-            <Suspense>
-                <ProgressBarItem />
-            </Suspense>
+            {/* Empty :) */}
         </View>
     );
 };

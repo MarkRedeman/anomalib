@@ -109,7 +109,7 @@ class TrainingService:
                 await model_service.delete_model(project_id=project_id, model_id=model.id)
             raise e
         finally:
-            logger.debug("Syncing progress with db stopped")
+            #logger.debug("Syncing progress with db stopped")
             if synchronization_task is not None and not synchronization_task.done():
                 synchronization_task.cancel()
 
@@ -184,7 +184,7 @@ class TrainingService:
         # Find and set threshold metric
         for callback in engine.trainer.callbacks:  # type: ignore[attr-defined]
             if threshold := getattr(callback, "normalized_pixel_threshold", None):
-                logger.debug(f"Found pixel threshold set to: {threshold}")
+                #logger.debug(f"Found pixel threshold set to: {threshold}")
                 model.threshold = threshold.item()
                 break
         export_path = engine.export(
@@ -209,10 +209,10 @@ class TrainingService:
                 progress: int = synchronization_parameters.progress
                 message = synchronization_parameters.message
                 if not await job_service.is_job_still_running(job_id=job_id):
-                    logger.debug("Job cancelled, stopping progress sync")
+                    #logger.debug("Job cancelled, stopping progress sync")
                     synchronization_parameters.set_cancel_training_event()
                     break
-                logger.debug(f"Syncing progress with db: {progress}% - {message}")
+                #logger.debug(f"Syncing progress with db: {progress}% - {message}")
                 await job_service.update_job_status(
                     job_id=job_id, status=JobStatus.RUNNING, progress=progress, message=message
                 )

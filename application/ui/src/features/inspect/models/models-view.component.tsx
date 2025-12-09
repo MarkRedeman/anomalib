@@ -14,7 +14,7 @@ import {
     Text,
     View,
 } from '@geti/ui';
-import { sortBy } from 'lodash-es';
+import { sortBy, uniqBy, uniqueId } from 'lodash-es';
 import { useDateFormatter } from 'react-aria';
 import { SchemaJob } from 'src/api/openapi-spec';
 
@@ -100,7 +100,10 @@ export const ModelsView = () => {
             };
         });
 
-    const showModels = sortBy([...nonCompletedJobs, ...models], (model) => -model.startTime);
+    const showModels = uniqBy(
+        sortBy([...nonCompletedJobs, ...models], (model) => -model.startTime),
+        (model) => model.id
+    );
 
     const { selectedModelId, onSetSelectedModelId } = useInference();
 
