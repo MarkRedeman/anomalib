@@ -13,8 +13,15 @@ webui_router = APIRouter(tags=["Webui"])
 
 
 @webui_router.get("/", include_in_schema=False)
+@webui_router.get("/{full_path:path}", include_in_schema=False)
 async def get_webui(full_path: str = "") -> FileResponse:  # noqa: ARG001
     """Get the webui index.html file."""
     if settings.static_files_dir and not (file_path := Path(settings.static_files_dir) / "index.html").exists():
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(file_path)
+    return FileResponse(
+        file_path,
+        headers={
+            "Cross-Origin-Embedder-Policy": "require-corp",
+            "Cross-Origin-Opener-Policy": "same-origin",
+        },
+    )
