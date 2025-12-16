@@ -298,6 +298,18 @@ class ModelService:
         if numpy_image is None:
             raise ValueError("Failed to decode image")
 
+        logger.info("Prediction shape {}, {}", numpy_image.shape, numpy_image)
+        # TODO we are getting this error,
+        # Can't set the input tensor with index: 0, because the model input (shape=[?,3,?,?]) and the tensor (shape=(1.1085.1905.4)) are incompatible
+        # when running inference using OpenVINO using an image with width 1905 pixels and height 1085 pixels
+        # Change the order here?
+        # numpy_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGBA2RGBA)
+        if numpy_image.shape[-1] == 4:  # RGBA
+            numpy_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGBA2RGB)
+        elif numpy_image.shape[-1] == 3:  # BGR
+            numpy_image = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2RGB)
+        logger.info("Prediction shape {}, {}", numpy_image.shape, numpy_image)
+
         # Run prediction
         pred = inference_model.predict(numpy_image)
 
