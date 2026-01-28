@@ -25,10 +25,8 @@ services:
     working_dir: /app/application/backend
     container_name: geti-inspect-${AI_DEVICE:-cpu}
     volumes:
-      # Persist database and uploaded data
-      - ../backend/data:/app/data
-      # Persist logs
-      - ../backend/logs:/app/logs
+      - geti-data:/app/data
+      - geti-logs:/app/logs
     ports:
       # nosemgrep: trailofbits.yaml.docker-compose.port-all-interfaces.port-all-interfaces # to be replaced
       - "8000:8000"
@@ -41,3 +39,12 @@ services:
     privileged: true
     devices:
       - /dev:/dev
+    group_add:
+      - dialout
+      - plugdev
+      - video
+
+
+volumes:
+  geti-data:
+  geti-logs:

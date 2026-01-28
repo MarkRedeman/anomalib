@@ -76,12 +76,22 @@ ARG USER_NAME="non-root"
 # Create secure non-root user with home directory
 RUN useradd -l -u ${UID} -m ${USER_NAME} \
     && mkdir -p /home/${USER_NAME}/.cache/uv \
-    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME}
+    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME} \
+    && chown -R ${USER_NAME}:${USER_NAME} /app/data /app/logs
 
 WORKDIR /app/application/backend
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --extra cpu
+
+RUN useradd -l -u ${UID} -m ${USER_NAME} \
+    && mkdir -p /home/${USER_NAME}/.cache/uv \
+    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME} \
+    && chown -R ${USER_NAME}:${USER_NAME} /app/data /app/logs \
+    && groupadd -g 18 dialout 2>/dev/null || true \
+    && groupadd -g 46 plugdev 2>/dev/null || true \
+    && groupadd -g 44 video 2>/dev/null || true \
+    && usermod -a -G dialout,plugdev,video ${USER_NAME}
 
 EXPOSE 8000
 
@@ -117,12 +127,22 @@ RUN apt-get update \
 
 RUN useradd -l -u ${UID} -m ${USER_NAME} \
     && mkdir -p /home/${USER_NAME}/.cache/uv \
-    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME}
+    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME} \
+    && chown -R ${USER_NAME}:${USER_NAME} /app/data /app/logs
 
 WORKDIR /app/application/backend
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --extra cu124
+
+RUN useradd -l -u ${UID} -m ${USER_NAME} \
+    && mkdir -p /home/${USER_NAME}/.cache/uv \
+    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME} \
+    && chown -R ${USER_NAME}:${USER_NAME} /app/data /app/logs \
+    && groupadd -g 18 dialout 2>/dev/null || true \
+    && groupadd -g 46 plugdev 2>/dev/null || true \
+    && groupadd -g 44 video 2>/dev/null || true \
+    && usermod -a -G dialout,plugdev,video ${USER_NAME}
 
 EXPOSE 8000
 
@@ -156,12 +176,22 @@ RUN apt-get update \
 
 RUN useradd -l -u ${UID} -m ${USER_NAME} \
     && mkdir -p /home/${USER_NAME}/.cache/uv \
-    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME}
+    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME} \
+    && chown -R ${USER_NAME}:${USER_NAME} /app/data /app/logs
 
 WORKDIR /app/application/backend
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --extra xpu
+
+RUN useradd -l -u ${UID} -m ${USER_NAME} \
+    && mkdir -p /home/${USER_NAME}/.cache/uv \
+    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME} \
+    && chown -R ${USER_NAME}:${USER_NAME} /app/data /app/logs \
+    && groupadd -g 18 dialout 2>/dev/null || true \
+    && groupadd -g 46 plugdev 2>/dev/null || true \
+    && groupadd -g 44 video 2>/dev/null || true \
+    && usermod -a -G dialout,plugdev,video ${USER_NAME}
 
 EXPOSE 8000
 
